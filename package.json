@@ -1,19 +1,39 @@
 {
   "name": "finova",
-  "version": "1.0.0",
-  "description": "A responsive, front-end fintech learning prototype built with plain HTML, CSS and JavaScript.",
-  "main": "app.js",
+  "version": "2.0.0",
+  "private": true,
+  "description": "FINOVA - AI-powered financial education, investment and business learning platform",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently -k -n api,web -c cyan,green \"node --watch server.js\" \"vite\"",
+    "build": "tsc --noEmit -p . && vite build",
+    "start": "node server.js",
+    "typecheck": "tsc --noEmit -p ."
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
     "cors": "^2.8.6",
-    "dotenv": "^18.0.9",
+    "dotenv": "^18.0.10",
     "express": "^5.3.0",
-    "openai": "^7.50.0"
+    "framer-motion": "^14.14.0",
+    "gsap": "^3.15.1",
+    "openai": "^7.60.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.6",
+    "recharts": "^3.11.0",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.187.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "concurrently": "^10.0.7",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
   }
 }
