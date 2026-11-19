@@ -28,7 +28,7 @@ export default function Learn() {
               const n = a.lessons.filter((l) => completed[l.id]).length;
               return (
                 <Reveal key={a.id} delay={i * 0.05}>
-                  <Link to={`/${a.id}`} className="glass rounded-3xl p-5 flex items-center gap-5 hover:border-cyan/50 transition-colors">
+                  <Link to={`/learn/${a.id}`} className="glass rounded-3xl p-5 flex items-center gap-5 hover:border-cyan/50 transition-colors">
                     <Ring pct={n / a.lessons.length} size={76} stroke={7} label={`${Math.round((n / a.lessons.length) * 100)}%`} />
                     <div className="min-w-0">
                       <div className="font-display text-lg font-semibold">{a.name}</div>

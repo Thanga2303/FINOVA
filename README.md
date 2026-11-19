@@ -1,50 +1,76 @@
 # FINOVA — Master Your Money. Build Your Future.
 
-An AI-powered financial education platform for Indian learners. FINOVA works like an interactive financial university, taking complete beginners from “what is a share?” to portfolio construction, with business-building lessons along the way.
+An Indian fintech learning platform that combines investment discovery, paper trading, a personal finance wallet, an AI financial tutor and planner, and a full financial-education university.
 
 ## What's inside
 
 | Area | Highlights |
 |---|---|
-| **Stock Market Academy** | 24 lessons (Beginner → Advanced): NSE, BSE, Sensex, Nifty 50, Demat, IPOs, fundamental & technical analysis, P/E, EPS, market psychology, risk management, portfolio construction |
-| **Mutual Fund Academy** | 16 lessons: fund types, SIP, NAV, expense ratio, direct vs regular, growth vs IDCW, riskometer, evaluating and comparing funds. SIP (with step-up) and lump-sum calculators with animated growth charts |
-| **Trading Academy** | 14 lessons: intraday, swing, positional, candlesticks, moving averages, RSI, MACD, stop-loss, risk-reward, trading psychology, options & futures basics. Interactive candlestick chart, risk-reward/position-size calculator and a **paper-trading simulator** (₹10 lakh virtual cash, fictional assets, positions, P&L, history, equity curve) |
-| **Investment Academy** | 11 lessons: compounding, inflation, asset allocation, emergency funds, goals, retirement, tax basics. 3D wealth-growth chart (React Three Fiber), inflation, emergency-fund and retirement planners |
-| **Business Idea Hub** | 12 ideas across 10 categories (student, AI-powered, SaaS, e-commerce, freelancing…), each with overview, cost estimate, skills, customers, model, revenue, marketing, challenges, a step-by-step roadmap and videos. Filters and bookmarks |
-| **Video Learning Center** | A video for every lesson and business idea. Uses the YouTube Data API when a key is set (prioritising trusted channels such as Zerodha Varsity, SEBI, NSE, NISM, AMFI); otherwise links to topic-specific YouTube searches. No invented video links |
-| **FINOVA AI** | Chat tutor that explains concepts with ₹ examples, builds roadmaps, summarises lessons and writes practice quizzes. Uses OpenAI or Gemini on the server; falls back to an offline tutor built from FINOVA's own lessons. Refuses stock tips and personalised advice |
-| **Dashboard & gamification** | XP, five levels (Beginner → Explorer → Analyst → Strategist → Finance Master), streaks, daily challenge, weekly goal, badges, quiz scores, saved videos, bookmarks, activity heatmap |
-| **Everywhere** | Global search (Ctrl K), dark and light themes, cinematic page transitions, a 3D globe with floating coins, GSAP scroll animations, responsive layouts, reduced-motion and low-power fallbacks |
+| **Stocks** | Market dashboard with NIFTY 50, SENSEX and NIFTY BANK, market status, breadth, top gainers/losers, most active and trending stocks, a sortable table of 52 large NSE companies, stock search and market news. Each stock page has 1D/1W/1M/1Y/5Y line and candlestick charts, market cap, P/E, EPS, ROE, 52-week range, company overview, annual statements, quarterly results, dividend history, news, a **Learn** drawer and related videos |
+| **Mutual Funds** | Every open-ended Direct-Growth scheme from AMFI with category filters (equity, debt, hybrid, index, ELSS, liquid, large/mid/small-cap) and search. Fund pages show real NAV history, returns computed from it (1M → 10Y, CAGR), expense ratio, minimum investment, top holdings and sector split where reported, a riskometer, Learn drawer and videos. Compare up to 3 funds with a growth-of-₹10,000 chart. Fund watchlist, SIP and lump-sum calculators |
+| **Investments** | Portfolio dashboard combining paper-trading and manually tracked holdings: current value, invested amount, P&L, returns, today's P&L, holdings tables, asset allocation, value history over the past year, order history and multiple watchlists |
+| **Paper orders** | Buy/sell or invest/redeem tickets with market, limit, one-time and SIP orders, estimated charges, an order summary and a confirmation screen. Uses delayed prices and latest NAVs; no real transactions |
+| **Discover** | Popular and trending stocks, top funds by 3-year CAGR, index funds, market and business news, official IPO links and education, all with sources and timestamps |
+| **Smart Wallet** | Income (recurring or one-off), expenses by category, monthly budgets, savings goals with required monthly contribution and estimated completion date, loans and planned SIPs, an income → expenses → emergency → investment budget → portfolio flow, charts, an educational financial health score (out of 100) and optional reminders |
+| **FINOVA AI** | Three modes. **Learning:** concepts, roadmaps, quizzes. **Research:** summarises real company and fund data and news with sources. **Planner:** a 9-part monthly plan from your income, expenses, debts, goals and risk preference. Calculators (SIP, lump sum, goals) run on exact formulas with growth charts. Wallet data is used only with your consent |
+| **Learn** | 65 lessons across four academies, each with explanation, example, key points, video and quiz; calculators, a 3D wealth chart, a candlestick practice chart and a fictional-market simulator; video library; XP, levels, streaks, badges and daily challenges |
+| **Business** | 12 business playbooks across 10 categories with cost estimates, models, marketing, challenges, roadmaps and videos |
 
-Every lesson includes a simple explanation, a practical example, important points, a related video, a knowledge quiz and a link to the next lesson.
+## Data sources
 
-## Tech stack
+| Data | Source | Label shown in app |
+|---|---|---|
+| Stock & index quotes, charts, fundamentals, statements, dividends, news | Yahoo Finance public endpoints | Delayed quotes · Historical · Fundamentals (latest reported) |
+| Mutual fund list and latest NAV | AMFI daily NAV file | End-of-day NAV |
+| Mutual fund NAV history | MFAPI (republishes AMFI data) | Historical (end-of-day NAV) |
+| Fund expense ratio, holdings, minimum investment (when reported) | Yahoo Finance (Morningstar data) | Shown with source |
+| Educational videos | YouTube Data API (optional key) or YouTube search links | — |
 
-React 19 · TypeScript · Vite · Tailwind CSS 4 · Framer Motion · GSAP ScrollTrigger · Three.js / React Three Fiber / drei · Recharts · Node.js + Express
+Nothing is invented: missing fields show "Not reported by data source". Movers are computed within FINOVA's tracked universe of 52 large NSE companies. The fund riskometer shown is the typical level for the category; each scheme's official riskometer is in its factsheet. Free data is delayed and intended for education.
+
+## Architecture
+
+```
+server.js                 entry (loads .env, starts API)
+server/index.js           Express routes
+server/services/market.js market data service (quotes, charts, fundamentals, search, news)
+server/services/funds.js  mutual fund data service (AMFI list, NAV history, computed returns, profiles)
+server/services/ai.js     AI assistance (OpenAI or Gemini, server-side keys only)
+server/services/videos.js educational video service
+src/lib/paper.ts          paper-trading engine
+src/lib/wallet.ts         wallet calculations, planner input, health score
+src/lib/finance.ts        exact financial formulas and the planner
+src/lib/aiTools.ts        AI calculators, planner and research tools
+supabase/schema.sql       PostgreSQL schema with Row Level Security
+```
+
+Watchlists, portfolio, paper orders, wallet records, preferences and learning progress are stored in the browser today. `supabase/schema.sql` defines matching tables (profiles, income, expenses, budgets, goals, investments, orders, watchlists, learning progress, AI conversations, planning preferences) with owner-only RLS policies, ready for adding Supabase Auth and sync.
 
 ## Run it
 
 ```bash
 npm install
-cp .env.example .env      # optional: add AI and YouTube keys
+cp .env.example .env      # optional: AI and YouTube keys
 npm run build
 npm start                 # http://127.0.0.1:3000
 ```
 
-For development with hot reload: `npm run dev` (Vite on :5173, API on :3000).
+Development with hot reload: `npm run dev` (Vite on :5173, API on :3000).
 
-### Environment variables (`.env`, server only)
+### Environment variables (server only)
 
 | Key | Purpose |
 |---|---|
 | `OPENAI_API_KEY` / `OPENAI_MODEL` | FINOVA AI via OpenAI |
 | `GEMINI_API_KEY` / `GEMINI_MODEL` | FINOVA AI via Google Gemini (used if OpenAI is missing or fails) |
 | `YOUTUBE_API_KEY` | Live video cards (title, thumbnail, channel, duration) |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | Reserved for cloud accounts (public anon key; data protected by RLS) |
 
-Keys are read only by `server.js` and never reach the browser. Without any keys, the app still works fully, using the offline tutor and YouTube search links.
-
-Learning progress is stored in the browser (localStorage). Supabase sign-in and cloud sync are a planned next step.
+Keys are read only by the server and never reach the browser. Without AI keys, FINOVA AI still runs its calculators, planner, research summaries and lesson library offline.
 
 ## Trust and safety
 
-FINOVA is an **educational** platform. It shows no live market prices: the charts and simulator use clearly labelled, simulated data for fictional companies. It never executes real trades or handles money, and it never claims guaranteed returns. All calculator results are marked hypothetical. Nothing in FINOVA is investment advice; learners should research independently or consult a SEBI-registered adviser.
+- **Education, not advice.** FINOVA isn't a SEBI-registered adviser or broker. No buy/sell recommendations, price predictions or guaranteed returns.
+- **No real money.** Orders are paper trades. Real investing needs a SEBI-registered broker or distributor with KYC, account security, consent and transaction safeguards.
+- **Wallet is a tracker,** not a bank or payment wallet. FINOVA never asks for banking passwords, UPI PINs, OTPs or card details, and never moves money automatically.
+- **Labelled data:** delayed, historical, end-of-day, simulated and hypothetical figures are always marked.

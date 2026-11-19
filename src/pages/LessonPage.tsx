@@ -21,7 +21,7 @@ export default function LessonPage() {
     <Page>
       <nav className="text-sm text-muted flex flex-wrap items-center gap-2" aria-label="Breadcrumb">
         <Link to="/learn" className="hover:text-text">Learn</Link><span>/</span>
-        <Link to={`/${a.id}`} className="hover:text-text">{a.name}</Link><span>/</span>
+        <Link to={`/learn/${a.id}`} className="hover:text-text">{a.name}</Link><span>/</span>
         <span className="text-text truncate">{lesson.title}</span>
       </nav>
 
@@ -95,7 +95,7 @@ export default function LessonPage() {
                 <div className="text-xs text-cyan">Next lesson →</div><div className="font-semibold">{next.title}</div>
               </Link>
             ) : (
-              <Link to={`/${a.id}`} className="rounded-2xl border border-emerald/40 bg-emerald/5 p-4 text-right"><div className="text-xs text-emerald">Academy finished</div><div className="font-semibold">Back to {a.name}</div></Link>
+              <Link to={`/learn/${a.id}`} className="rounded-2xl border border-emerald/40 bg-emerald/5 p-4 text-right"><div className="text-xs text-emerald">Academy finished</div><div className="font-semibold">Back to {a.name}</div></Link>
             )}
           </nav>
           <Disclaimer className="mt-10" />

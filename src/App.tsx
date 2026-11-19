@@ -1,9 +1,11 @@
 import { AnimatePresence } from "framer-motion";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Route, Routes, useLocation } from "react-router-dom";
-import Nav from "./components/Nav";
+import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
+import Nav, { BottomNav } from "./components/Nav";
 import Search from "./components/Search";
 import Footer from "./components/Footer";
+import ReminderToasts from "./components/ReminderToasts";
+import type { AcademyId } from "./data/types";
 
 const Home = lazy(() => import("./pages/Home"));
 const Learn = lazy(() => import("./pages/Learn"));
@@ -13,8 +15,23 @@ const Business = lazy(() => import("./pages/Business"));
 const BusinessDetail = lazy(() => import("./pages/BusinessDetail"));
 const Videos = lazy(() => import("./pages/Videos"));
 const AiPage = lazy(() => import("./pages/AiPage"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Stocks = lazy(() => import("./pages/Stocks"));
+const StockDetail = lazy(() => import("./pages/StockDetail"));
+const Funds = lazy(() => import("./pages/Funds"));
+const FundDetail = lazy(() => import("./pages/FundDetail"));
+const FundCompare = lazy(() => import("./pages/FundCompare"));
+const Investments = lazy(() => import("./pages/Investments"));
+const Discover = lazy(() => import("./pages/Discover"));
+const Wallet = lazy(() => import("./pages/Wallet"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+
+const ACADEMIES: AcademyId[] = ["stocks", "mutual-funds", "trading", "investments"];
+
+function AcademyRoute() {
+  const { academy = "" } = useParams();
+  return ACADEMIES.includes(academy as AcademyId) ? <AcademyPage key={academy} id={academy as AcademyId} /> : <NotFound />;
+}
 
 function Loading() {
   return (
@@ -30,14 +47,9 @@ export default function App() {
 
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setSearchOpen((o) => !o);
-      }
-      if (e.key === "/" && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
-        e.preventDefault();
-        setSearchOpen(true);
-      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setSearchOpen((o) => !o); }
+      const t = e.target;
+      if (e.key === "/" && !(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement)) { e.preventDefault(); setSearchOpen(true); }
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
@@ -54,28 +66,40 @@ export default function App() {
       <a href="#content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[70] btn-primary">Skip to content</a>
       <Nav onSearch={() => setSearchOpen(true)} />
       <Search open={searchOpen} onClose={() => setSearchOpen(false)} />
-      <div id="content">
+      <div id="content" className="pb-16 xl:pb-0">
         <Suspense fallback={<Loading />}>
           <AnimatePresence mode="wait">
             <Routes location={loc} key={loc.pathname}>
               <Route path="/" element={<Home />} />
+              <Route path="/stocks" element={<Stocks />} />
+              <Route path="/stocks/:symbol" element={<StockDetail />} />
+              <Route path="/funds" element={<Funds />} />
+              <Route path="/funds/compare" element={<FundCompare />} />
+              <Route path="/funds/:code" element={<FundDetail />} />
+              <Route path="/investments" element={<Investments />} />
+              <Route path="/discover" element={<Discover />} />
+              <Route path="/wallet" element={<Wallet />} />
               <Route path="/learn" element={<Learn />} />
-              <Route path="/stocks" element={<AcademyPage id="stocks" />} />
-              <Route path="/mutual-funds" element={<AcademyPage id="mutual-funds" />} />
-              <Route path="/trading" element={<AcademyPage id="trading" />} />
-              <Route path="/investments" element={<AcademyPage id="investments" />} />
+              <Route path="/learn/videos" element={<Videos />} />
+              <Route path="/learn/:academy" element={<AcademyRoute />} />
               <Route path="/learn/:academy/:lessonId" element={<LessonPage />} />
               <Route path="/business" element={<Business />} />
               <Route path="/business/:id" element={<BusinessDetail />} />
-              <Route path="/videos" element={<Videos />} />
               <Route path="/ai" element={<AiPage />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/profile" element={<Profile />} />
+              {/* Old addresses from FINOVA 1.x */}
+              <Route path="/mutual-funds" element={<Navigate to="/learn/mutual-funds" replace />} />
+              <Route path="/trading" element={<Navigate to="/learn/trading" replace />} />
+              <Route path="/videos" element={<Navigate to={`/learn/videos${loc.search}`} replace />} />
+              <Route path="/dashboard" element={<Navigate to="/profile" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AnimatePresence>
         </Suspense>
       </div>
       <Footer />
+      <BottomNav />
+      <ReminderToasts />
     </>
   );
 }

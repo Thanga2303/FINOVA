@@ -7,14 +7,59 @@ import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
 import { academies, allLessons, businessIdeas, lessonById, lessonPath, recentlyAdded, trending } from "../data";
 import { candles, SIM_ASSETS } from "../lib/sim";
 import { Disclaimer, Icon, inr, Page, Reveal, SectionHead } from "../components/ui";
+import { cleanSym, fmtTime, useApi, type Overview } from "../lib/api";
+import { useStore } from "../lib/store";
+import { monthSummary, thisMonth } from "../lib/wallet";
+import { Change, DataBadge, level, price } from "../components/market/bits";
+
+function HomeMarket() {
+  const { data, error } = useApi<Overview>("/api/market/overview", { poll: 60e3, maxAge: 55e3 });
+  const wallet = useStore((s) => s.wallet);
+  const sum = monthSummary(wallet, thisMonth());
+  return (
+    <div className="glass rounded-3xl p-5 sm:p-6 h-full">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <h2 className="font-display text-xl font-semibold">Markets today</h2>
+        {data && <span className={`chip ${data.status.open ? "!text-emerald" : "!text-amber"}`}>Market {data.status.label} · {fmtTime(data.status.lastTradeTime)}</span>}
+      </div>
+      {error && <p className="text-sm text-muted">Live market data is unavailable right now.</p>}
+      <div className="grid sm:grid-cols-3 gap-3">
+        {(data?.indices ?? []).map((q) => (
+          <Link key={q.symbol} to={`/stocks/${encodeURIComponent(q.symbol)}`} className="rounded-2xl border border-line p-3 hover:bg-card-strong">
+            <div className="text-xs text-muted font-semibold">{q.name}</div>
+            <div className="font-display text-xl font-semibold tabular-nums">{level(q.price)}</div>
+            <Change pct={q.changePct} className="text-sm" />
+          </Link>
+        ))}
+      </div>
+      {data && (
+        <div className="grid sm:grid-cols-2 gap-4 mt-4 text-sm">
+          {[["Top gainers", data.gainers], ["Top losers", data.losers]].map(([t, list]) => (
+            <div key={t as string}>
+              <div className="text-xs text-muted mb-1">{t as string}</div>
+              {(list as Overview["gainers"]).slice(0, 3).map((g) => (
+                <Link key={g.symbol} to={`/stocks/${encodeURIComponent(g.symbol)}`} className="flex justify-between py-1 hover:text-cyan"><span>{cleanSym(g.symbol)}</span><span className="flex gap-3"><span className="tabular-nums">{price(g.price)}</span><Change pct={g.changePct} /></span></Link>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+      {data && <DataBadge meta={data.meta} kind="Delayed quotes" className="mt-3" />}
+      <div className="mt-4 pt-4 border-t border-line flex flex-wrap items-center justify-between gap-3 text-sm">
+        <span className="text-muted">Wallet this month: <span className="text-emerald">{inr(sum.income)}</span> in · <span className="text-rose">{inr(sum.spent)}</span> spent · <span className="text-cyan">{inr(sum.remaining)}</span> left</span>
+        <div className="flex gap-2"><Link to="/wallet" className="chip !text-cyan">Open Wallet</Link><Link to="/discover" className="chip">Discover</Link></div>
+      </div>
+    </div>
+  );
+}
 
 gsap.registerPlugin(ScrollTrigger);
 const HeroScene = lazy(() => import("../three/HeroScene"));
 
 const CATS = [
   { icon: "chart", name: "Stock Market", to: "/stocks", text: "Shares, exchanges, indices and how to analyse a company." },
-  { icon: "pie", name: "Mutual Funds", to: "/mutual-funds", text: "SIPs, NAV, fund types and choosing a fund." },
-  { icon: "candle", name: "Trading", to: "/trading", text: "Charts, indicators, risk and a paper-trading simulator." },
+  { icon: "pie", name: "Mutual Funds", to: "/funds", text: "SIPs, NAV, fund types and choosing a fund." },
+  { icon: "candle", name: "Trading", to: "/learn/trading", text: "Charts, indicators, risk and a paper-trading simulator." },
   { icon: "growth", name: "Investing", to: "/investments", text: "Compounding, allocation, goals, retirement and tax." },
   { icon: "bulb", name: "Business", to: "/business", text: "Startup roadmaps, costs and revenue models." },
   { icon: "shield", name: "Risk Management", to: "/learn/stocks/risk-management-stocks", text: "Position sizing, stops and protecting capital." },
@@ -33,7 +78,7 @@ function FloatingCard({ className, delay, children }: { className: string; delay
   );
 }
 
-function LiveStyleMarket() {
+export function LiveStyleMarket() {
   const asset = SIM_ASSETS[5];
   const [data, setData] = useState(() => candles(80, asset.seed, asset.start, 0.0003, asset.vol).map((c, i) => ({ i, v: +c.c.toFixed(2) })));
   useEffect(() => {
@@ -160,7 +205,7 @@ export default function Home() {
 
       {/* MARKET VIZ + FACTS */}
       <section className="grid lg:grid-cols-[1.3fr_1fr] gap-6 mt-8">
-        <Reveal><LiveStyleMarket /></Reveal>
+        <Reveal><HomeMarket /></Reveal>
         <Reveal delay={0.1}>
           <div className="glass rounded-3xl p-6 h-full">
             <div className="text-xs font-semibold tracking-[0.2em] uppercase text-cyan mb-4">Indian market facts</div>
@@ -183,7 +228,7 @@ export default function Home() {
       </section>
 
       {/* SCROLL INTRO TO CATEGORIES */}
-      <section id="explore" ref={exploreRef} className="relative mt-28 scroll-mt-24" style={{ perspective: 1200 }}>
+      <section id="explore" ref={exploreRef} className="relative mt-28 scroll-mt-24 overflow-x-clip" style={{ perspective: 1200 }}>
         <div className="explore-glow absolute -top-20 left-1/2 -translate-x-1/2 w-[40rem] h-[40rem] rounded-full bg-violet/10 blur-3xl pointer-events-none" />
         <div className="text-center mb-12">
           <div className="text-xs font-semibold tracking-[0.2em] uppercase text-cyan mb-3">Explore the financial world</div>
@@ -214,7 +259,7 @@ export default function Home() {
             const counts = ["Beginner", "Intermediate", "Advanced"].map((lv) => a.lessons.filter((l) => l.level === lv).length);
             return (
               <Reveal key={a.id} delay={i * 0.06} className={span}>
-                <Link to={`/${a.id}`} className="block h-full glass rounded-3xl p-6 hover:-translate-y-1 transition-transform relative overflow-hidden">
+                <Link to={`/learn/${a.id}`} className="block h-full glass rounded-3xl p-6 hover:-translate-y-1 transition-transform relative overflow-hidden">
                   <div className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${a.accent}, transparent)` }} />
                   <div className="flex items-start justify-between gap-4">
                     <div>

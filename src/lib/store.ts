@@ -17,7 +17,43 @@ export type State = {
   badges: string[];
   usedTools: string[];
   sim: { cash: number; positions: Position[]; history: Trade[]; equity: { t: number; v: number }[] };
+  // ---- FINOVA 2.0: investing (paper trading + manual tracking) ----
+  watchlists: Watchlist[];
+  fundWatch: number[];
+  paper: { cash: number; holdings: Holding[]; orders: Order[] };
+  manual: Holding[];
+  // ---- FINOVA 3.0: wallet & planning ----
+  wallet: Wallet;
+  finProfile: FinProfile;
+  consent: { aiUsesWallet: boolean; aiRemembers: boolean };
+  notify: NotifyPrefs;
+  dismissed: Record<string, string>; // reminder id -> period key dismissed
 };
+
+export type Watchlist = { id: string; name: string; symbols: string[] };
+export type AssetKind = "stock" | "fund";
+export type Holding = { id: string; kind: AssetKind; symbol: string; name: string; qty: number; avg: number; category?: string; addedAt: number };
+export type Order = {
+  id: string; kind: AssetKind; symbol: string; name: string; side: "BUY" | "SELL"; type: "MARKET" | "LIMIT" | "SIP" | "LUMPSUM";
+  qty: number; price: number; limitPrice?: number; amount: number; charges: number; status: "EXECUTED" | "OPEN" | "CANCELLED" | "REJECTED";
+  placedAt: number; executedAt?: number; note?: string; pnl?: number;
+};
+export type IncomeEntry = { id: string; source: "Salary" | "Freelancing" | "Business" | "Other" | "Additional"; amount: number; date: string; recurring: boolean; note?: string };
+export type ExpenseCat = "Food" | "Shopping" | "Education" | "Transportation" | "Rent" | "Entertainment" | "Bills" | "Healthcare" | "Other";
+export type ExpenseEntry = { id: string; category: ExpenseCat; amount: number; date: string; note?: string; recurring?: boolean };
+export type Goal = { id: string; name: string; target: number; saved: number; deadline: string; kind: "emergency" | "savings" | "purchase" | "education" | "business" | "investment"; createdAt: number; contributions: { date: string; amount: number }[] };
+export type Debt = { id: string; name: string; outstanding: number; emi: number; ratePct: number };
+export type PlannedInvestment = { id: string; name: string; amount: number; dayOfMonth: number; active: boolean };
+export type Wallet = {
+  incomes: IncomeEntry[]; expenses: ExpenseEntry[]; budgets: Partial<Record<ExpenseCat, number>>; goals: Goal[];
+  debts: Debt[]; planned: PlannedInvestment[]; savingsGoalMonthly: number; savingsLog: { id: string; date: string; amount: number; note?: string }[];
+};
+export type FinProfile = { risk: "low" | "medium" | "high"; horizonYears: number; incomeStable: boolean; dependents: number };
+export type NotifyPrefs = { enabled: boolean; browser: boolean; income: boolean; expenses: boolean; goals: boolean; sip: boolean; budget: boolean; learning: boolean };
+
+export const PAPER_CASH = 100000;
+export const EXPENSE_CATS: ExpenseCat[] = ["Food", "Shopping", "Education", "Transportation", "Rent", "Entertainment", "Bills", "Healthcare", "Other"];
+export const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
 
 export const START_CASH = 1_000_000;
 
@@ -35,12 +71,25 @@ const fresh = (): State => ({
   badges: [],
   usedTools: [],
   sim: { cash: START_CASH, positions: [], history: [], equity: [] },
+  watchlists: [{ id: "default", name: "My watchlist", symbols: ["^NSEI", "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS"] }],
+  fundWatch: [],
+  paper: { cash: PAPER_CASH, holdings: [], orders: [] },
+  manual: [],
+  wallet: { incomes: [], expenses: [], budgets: {}, goals: [], debts: [], planned: [], savingsGoalMonthly: 0, savingsLog: [] },
+  finProfile: { risk: "medium", horizonYears: 5, incomeStable: true, dependents: 0 },
+  consent: { aiUsesWallet: false, aiRemembers: false },
+  notify: { enabled: false, browser: false, income: true, expenses: true, goals: true, sip: true, budget: true, learning: true },
+  dismissed: {},
 });
 
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...fresh(), ...JSON.parse(raw) };
+    if (raw) {
+      const f = fresh();
+      const s = JSON.parse(raw);
+      return { ...f, ...s, wallet: { ...f.wallet, ...(s.wallet ?? {}) }, notify: { ...f.notify, ...(s.notify ?? {}) }, consent: { ...f.consent, ...(s.consent ?? {}) }, finProfile: { ...f.finProfile, ...(s.finProfile ?? {}) }, paper: { ...f.paper, ...(s.paper ?? {}) } };
+    }
   } catch {
     /* storage blocked */
   }
@@ -72,8 +121,10 @@ export function useStore<T>(sel: (s: State) => T): T {
     () => sel(state),
   );
 }
+/** Resets learning progress only (XP, lessons, quizzes, badges). Wallet, investments and settings are kept. */
 export function resetProgress() {
-  const keep = { name: state.name, theme: state.theme };
+  const { name, theme, watchlists, fundWatch, paper, manual, wallet, finProfile, consent, notify, dismissed, sim } = state;
+  const keep = { name, theme, watchlists, fundWatch, paper, manual, wallet, finProfile, consent, notify, dismissed, sim };
   state = { ...fresh(), ...keep };
   setState(() => ({}));
 }
@@ -152,6 +203,9 @@ export const BADGES: { id: string; name: string; desc: string; icon: string }[] 
   { id: "first-trade", name: "Paper Trader", desc: "Place a simulated trade", icon: "T" },
   { id: "founder", name: "Founder Mindset", desc: "Bookmark a business idea", icon: "B" },
   { id: "curious", name: "Curious", desc: "Ask FINOVA AI a question", icon: "AI" },
+  { id: "first-order", name: "First Order", desc: "Place a paper investment order", icon: "₹" },
+  { id: "tracker", name: "Money Tracker", desc: "Log 10 expenses in Wallet", icon: "W" },
+  { id: "goal-getter", name: "Goal Getter", desc: "Complete a savings goal", icon: "G" },
 ];
 
 function computeBadges(s: State): string[] {
@@ -166,6 +220,9 @@ function computeBadges(s: State): string[] {
   if (s.sim.history.length > 0) b.add("first-trade");
   if (s.bookmarks.length > 0) b.add("founder");
   if (s.usedTools.includes("ai")) b.add("curious");
+  if (s.paper.orders.some((o) => o.status === "EXECUTED")) b.add("first-order");
+  if (s.wallet.expenses.length >= 10) b.add("tracker");
+  if (s.wallet.goals.some((g) => g.saved >= g.target && g.target > 0)) b.add("goal-getter");
   return [...b];
 }
 

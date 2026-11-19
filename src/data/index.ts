@@ -16,7 +16,7 @@ export const allLessons: Lesson[] = academies.flatMap((a) => a.lessons);
 export const academyById = (id: string) => academies.find((a) => a.id === id);
 export const lessonById = (id: string) => allLessons.find((l) => l.id === id);
 export const lessonPath = (l: Lesson) => `/learn/${l.academy}/${l.id}`;
-export const academyPath = (id: AcademyId) => `/${id}`;
+export const academyPath = (id: AcademyId) => `/learn/${id}`;
 
 export function nextLesson(l: Lesson): Lesson | undefined {
   const list = academyById(l.academy)!.lessons;
@@ -47,15 +47,15 @@ export const recentlyAdded = ["institutional-investing", "compare-mf", "macd", "
 export type SearchHit = { kind: "Lesson" | "Business idea" | "Video" | "Module" | "Tool"; title: string; sub: string; to: string };
 
 const tools: SearchHit[] = [
-  { kind: "Tool", title: "SIP calculator", sub: "Mutual Fund Academy", to: "/mutual-funds#tools" },
-  { kind: "Tool", title: "Lump-sum calculator", sub: "Mutual Fund Academy", to: "/mutual-funds#tools" },
-  { kind: "Tool", title: "Compounding & 3D wealth growth", sub: "Investment Academy", to: "/investments#tools" },
-  { kind: "Tool", title: "Inflation calculator", sub: "Investment Academy", to: "/investments#tools" },
-  { kind: "Tool", title: "Emergency fund planner", sub: "Investment Academy", to: "/investments#tools" },
-  { kind: "Tool", title: "Retirement planner", sub: "Investment Academy", to: "/investments#tools" },
-  { kind: "Tool", title: "Paper-trading simulator", sub: "Trading Academy", to: "/trading#simulator" },
-  { kind: "Tool", title: "Risk-reward calculator", sub: "Trading Academy", to: "/trading#tools" },
-  { kind: "Tool", title: "Candlestick chart practice", sub: "Trading Academy", to: "/trading#tools" },
+  { kind: "Tool", title: "SIP calculator", sub: "Mutual Fund Academy", to: "/learn/mutual-funds#tools" },
+  { kind: "Tool", title: "Lump-sum calculator", sub: "Mutual Fund Academy", to: "/learn/mutual-funds#tools" },
+  { kind: "Tool", title: "Compounding & 3D wealth growth", sub: "Investment Academy", to: "/learn/investments#tools" },
+  { kind: "Tool", title: "Inflation calculator", sub: "Investment Academy", to: "/learn/investments#tools" },
+  { kind: "Tool", title: "Emergency fund planner", sub: "Investment Academy", to: "/learn/investments#tools" },
+  { kind: "Tool", title: "Retirement planner", sub: "Investment Academy", to: "/learn/investments#tools" },
+  { kind: "Tool", title: "Paper-trading simulator", sub: "Trading Academy", to: "/learn/trading#simulator" },
+  { kind: "Tool", title: "Risk-reward calculator", sub: "Trading Academy", to: "/learn/trading#tools" },
+  { kind: "Tool", title: "Candlestick chart practice", sub: "Trading Academy", to: "/learn/trading#tools" },
 ];
 
 export function search(term: string): SearchHit[] {
@@ -65,7 +65,7 @@ export function search(term: string): SearchHit[] {
   const match = (s: string) => words.every((w) => s.toLowerCase().includes(w));
   const hits: SearchHit[] = [];
   academies.forEach((a) => {
-    if (match(a.name + " " + a.tagline)) hits.push({ kind: "Module", title: a.name, sub: a.tagline, to: `/${a.id}` });
+    if (match(a.name + " " + a.tagline)) hits.push({ kind: "Module", title: a.name, sub: a.tagline, to: `/learn/${a.id}` });
   });
   allLessons.forEach((l) => {
     if (match(l.title + " " + l.summary + " " + l.points.join(" "))) hits.push({ kind: "Lesson", title: l.title, sub: `${academyById(l.academy)!.name} · ${l.level}`, to: lessonPath(l) });
@@ -74,7 +74,7 @@ export function search(term: string): SearchHit[] {
     if (match(b.name + " " + b.overview + " " + b.categories.join(" "))) hits.push({ kind: "Business idea", title: b.name, sub: b.categories.join(" · "), to: `/business/${b.id}` });
   });
   allLessons.forEach((l) => {
-    if (match(l.video + " " + l.title)) hits.push({ kind: "Video", title: `Video: ${l.title}`, sub: "Video Library", to: `/videos?topic=${l.id}` });
+    if (match(l.video + " " + l.title)) hits.push({ kind: "Video", title: `Video: ${l.title}`, sub: "Video Library", to: `/learn/videos?topic=${l.id}` });
   });
   tools.forEach((x) => match(x.title + " " + x.sub) && hits.push(x));
   return hits.slice(0, 30);

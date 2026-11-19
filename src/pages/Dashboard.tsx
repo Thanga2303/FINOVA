@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { academies, allLessons, lessonById, lessonPath } from "../data";
 import { businessIdeas } from "../data/business";
 import { BADGES, LEVELS, levelFor, resetProgress, setState, streak, useStore } from "../lib/store";
-import { Icon, Page, Reveal, Ring } from "../components/ui";
+import { Icon, Reveal, Ring } from "../components/ui";
 import DailyChallenge from "../components/DailyChallenge";
 
 const WEEKLY_GOAL = 5;
@@ -24,7 +24,7 @@ function Heatmap({ days }: { days: string[] }) {
   );
 }
 
-export default function Dashboard() {
+export default function DashboardBody() {
   const s = useStore((x) => x);
   const [name, setName] = useState(s.name);
   const { level, next, pct, index } = levelFor(s.xp);
@@ -51,7 +51,7 @@ export default function Dashboard() {
   const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
-    <Page>
+    <>
       <section className="grid lg:grid-cols-[1fr_auto] gap-6 items-center">
         <div>
           <div className="text-sm text-muted">{greet}</div>
@@ -101,7 +101,7 @@ export default function Dashboard() {
               {academies.map((a) => {
                 const n = a.lessons.filter((l) => s.completed[l.id]).length;
                 return (
-                  <Link key={a.id} to={`/${a.id}`} className="block group">
+                  <Link key={a.id} to={`/learn/${a.id}`} className="block group">
                     <div className="flex justify-between text-sm mb-1.5"><span className="font-medium group-hover:text-cyan">{a.name}</span><span className="text-muted">{n}/{a.lessons.length}</span></div>
                     <div className="h-2.5 rounded-full bg-line overflow-hidden">
                       <motion.div className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${a.accent}, var(--emerald))` }} initial={{ width: 0 }} animate={{ width: `${(n / a.lessons.length) * 100}%` }} transition={{ duration: 1.1, ease: "easeOut" }} />
@@ -173,7 +173,7 @@ export default function Dashboard() {
                 {s.savedVideos.map((id) => {
                   const l = lessonById(id);
                   const b = businessIdeas.find((x) => `biz-${x.id}` === id);
-                  return <li key={id}><Link to={`/videos?topic=${id}`} className="text-muted hover:text-cyan">▶ {l?.title ?? b?.name ?? id}</Link></li>;
+                  return <li key={id}><Link to={`/learn/videos?topic=${id}`} className="text-muted hover:text-cyan">▶ {l?.title ?? b?.name ?? id}</Link></li>;
                 })}
               </ul>
             )}
@@ -192,6 +192,6 @@ export default function Dashboard() {
           <button className="text-xs text-faint hover:text-rose" onClick={() => confirm("Reset all learning progress in this browser?") && resetProgress()}>Reset progress</button>
         </div>
       </section>
-    </Page>
+    </>
   );
 }
