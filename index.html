@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080b14" />
+  <title>FINOVA — Intelligence Beyond Money</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="Finova home">
+        <span class="brand-mark">F</span><span>FINOVA</span>
+      </a>
+      <div class="side-label">WORKSPACE</div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="overview"><span>◫</span> Overview</button>
+        <button class="nav-item" data-view="ai"><span>✧</span> Finova AI <em>NEW</em></button>
+        <button class="nav-item" data-view="learn"><span>▤</span> Learn</button>
+        <button class="nav-item" data-view="simulator"><span>⌁</span> Trading simulator</button>
+        <button class="nav-item" data-view="finance"><span>◷</span> My finances</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="help-card"><div class="help-icon">✦</div><strong>Build your money skills</strong><p>Small lessons. Smarter decisions.</p><button data-goto="learn">Explore learning →</button></div>
+        <div class="profile"><div class="avatar">U</div><div><strong>Your account</strong><small>Free plan · Demo</small></div><span class="dots">•••</span></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="brand-mark">F</span> FINOVA</div>
+        <div class="breadcrumb">Workspace <span>/</span> <b id="crumb">Overview</b></div>
+        <div class="top-actions"><span class="status-dot"></span><span class="demo-label">DEMO ENVIRONMENT</span><button class="icon-btn" title="Notifications">♧</button><div class="avatar small">U</div></div>
+      </header>
+
+      <section class="view active" id="view-overview">
+        <div class="welcome-row"><div><div class="eyebrow">TUESDAY, YOUR FINANCIAL RESET</div><h1>Make money make <span>sense.</span></h1><p class="muted">Your personal space to learn, plan and practise with confidence.</p></div><div class="welcome-orb"><div class="orb-core">F<span>✦</span></div></div></div>
+        <div class="stats-grid">
+          <article class="stat-card"><div class="stat-top">Virtual portfolio <span class="pill blue">PRACTICE</span></div><div class="stat-value" id="virtual-balance">₹1,00,000</div><div class="stat-foot">Starting demo balance</div></article>
+          <article class="stat-card"><div class="stat-top">Monthly expenses <span class="stat-icon">↗</span></div><div class="stat-value" id="expense-total">₹0</div><div class="stat-foot">Added on this device</div></article>
+          <article class="stat-card"><div class="stat-top">Learning progress <span class="stat-icon">✧</span></div><div class="stat-value">Getting started</div><div class="stat-foot">Your next step: learn the basics</div></article>
+        </div>
+        <div class="section-heading"><div><div class="eyebrow">YOUR FINOVA SPACE</div><h2>Where would you like to begin?</h2></div></div>
+        <div class="feature-grid">
+          <button class="feature-card feature-ai" data-goto="ai"><span class="feature-symbol">✧</span><span class="feature-tag">AI ASSISTANT</span><h3>Ask Finova AI</h3><p>Understand money concepts in simple language.</p><span class="card-arrow">↗</span></button>
+          <button class="feature-card" data-goto="learn"><span class="feature-symbol">▤</span><span class="feature-tag">LEARNING HUB</span><h3>Learn investing</h3><p>Build your knowledge, one lesson at a time.</p><span class="card-arrow">↗</span></button>
+          <button class="feature-card" data-goto="simulator"><span class="feature-symbol">⌁</span><span class="feature-tag">RISK-FREE PRACTICE</span><h3>Try the simulator</h3><p>Practise with virtual money, not real cash.</p><span class="card-arrow">↗</span></button>
+          <button class="feature-card" data-goto="finance"><span class="feature-symbol">◷</span><span class="feature-tag">MONEY MANAGER</span><h3>Track spending</h3><p>Record expenses and see where money goes.</p><span class="card-arrow">↗</span></button>
+        </div>
+        <div class="notice"><span>ⓘ</span><p><b>Learning, not financial advice.</b> Finova is an educational prototype. Market data and trading are simulated; nothing here is a recommendation to buy or sell securities.</p></div>
+      </section>
+
+      <section class="view" id="view-ai">
+        <div class="page-head"><div class="eyebrow">YOUR LEARNING COMPANION</div><h1>Meet <span>Finova AI.</span></h1><p class="muted">Ask questions about budgeting, saving, investing and financial terminology.</p></div>
+        <div class="chat-panel"><div class="chat-head"><div class="ai-avatar">✧</div><div><strong>Finova AI</strong><small><span class="status-dot"></span> Educational assistant preview</small></div><span class="pill purple">PREVIEW</span></div>
+          <div class="chat-body" id="chat-body"><div class="bubble ai-bubble">Hi! I'm Finova AI. Ask me to explain a financial concept in beginner-friendly language. This preview uses sample responses; connect an AI service to enable live AI answers.</div></div>
+          <div class="suggestions"><button class="prompt-chip">What is a stock?</button><button class="prompt-chip">Explain SIP in simple terms</button><button class="prompt-chip">How do I make a budget?</button></div>
+          <form id="chat-form" class="chat-input"><input id="chat-input" placeholder="Ask a money question..." autocomplete="off"><button type="submit">Send ↗</button></form>
+        </div>
+      </section>
+
+      <section class="view" id="view-learn">
+        <div class="page-head"><div class="eyebrow">FINANCIAL KNOWLEDGE</div><h1>Learn at your <span>own pace.</span></h1><p class="muted">Short learning paths for beginners and curious investors.</p></div>
+        <div class="mode-row"><button class="mode active" data-mode="beginner">Beginner path</button><button class="mode" data-mode="advanced">Advanced topics</button></div>
+        <div class="lesson-grid" id="lesson-grid"></div>
+        <div class="notice"><span>ⓘ</span><p>Lessons are for general education. Investing involves risk, including possible loss of capital. Verify information from trusted sources before making financial decisions.</p></div>
+      </section>
+
+      <section class="view" id="view-simulator">
+        <div class="page-head"><div class="eyebrow">PRACTISE WITHOUT REAL MONEY</div><h1>Trading <span>simulator.</span></h1><p class="muted">A learning sandbox with fictional sample prices. No real orders are placed.</p></div>
+        <div class="sim-grid"><div class="panel balance-panel"><div class="panel-label">AVAILABLE VIRTUAL CASH</div><div class="balance" id="sim-balance">₹1,00,000</div><div class="sim-sub">Demo funds · Reset anytime</div><button class="outline-btn" id="reset-sim">Reset simulator</button></div>
+          <div class="panel trade-panel"><div class="panel-label">PRACTICE TRADE</div><label for="asset">Sample asset</label><select id="asset"><option value="ALPHA">ALPHA · Fictional</option><option value="NOVA">NOVA · Fictional</option><option value="ORBIT">ORBIT · Fictional</option></select><div class="sample-price" id="sample-price">₹250.00 <small>Sample price</small></div><label for="quantity">Quantity</label><input id="quantity" type="number" min="1" max="10000" value="1"><div class="trade-actions"><button id="buy-btn" class="primary-btn">Buy (virtual)</button><button id="sell-btn" class="outline-btn">Sell (virtual)</button></div><p class="tiny muted">Prices are illustrative and do not represent live market quotes.</p></div></div>
+        <div class="panel history-panel"><div class="panel-title">Practice history</div><div id="trade-history" class="empty-state">No practice trades yet. Make a virtual trade to see it here.</div></div>
+      </section>
+
+      <section class="view" id="view-finance">
+        <div class="page-head"><div class="eyebrow">PERSONAL MONEY MANAGER</div><h1>Know where it <span>goes.</span></h1><p class="muted">Track your expenses locally in this browser.</p></div>
+        <div class="finance-grid"><div class="panel expense-form"><div class="panel-title">Add an expense</div><form id="expense-form"><label>Description</label><input id="expense-name" placeholder="e.g. Lunch" required maxlength="60"><label>Amount (₹)</label><input id="expense-amount" type="number" min="1" step="1" placeholder="150" required><label>Category</label><select id="expense-category"><option>Food</option><option>Travel</option><option>Study</option><option>Shopping</option><option>Other</option></select><button class="primary-btn full-btn" type="submit">Add expense</button></form></div><div class="panel expense-list"><div class="panel-title">Recent expenses <span class="pill blue" id="expense-count">0 ITEMS</span></div><div id="expense-items" class="empty-state">No expenses yet. Add your first expense.</div></div></div>
+      </section>
+
+      <footer>FINOVA <span>·</span> Intelligence Beyond Money <span class="footer-right">Educational prototype · Not financial advice</span></footer>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
