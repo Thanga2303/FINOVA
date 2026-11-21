@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { applyTheme, levelFor, setState, useStore } from "../lib/store";
 import { Icon } from "./ui";
+import { PlanBadge } from "./Membership";
 
 export const NAV = [
   { to: "/", label: "Home", icon: "grid" },
@@ -24,7 +25,7 @@ export function BottomNav() {
   const loc = useLocation();
   useEffect(() => setMore(false), [loc.pathname]);
   const items = NAV.filter((n) => BOTTOM.includes(n.to));
-  const rest = [...NAV.filter((n) => !BOTTOM.includes(n.to)), { to: "/discover", label: "Discover", icon: "search" }, { to: "/learn/videos", label: "Video Library", icon: "play" }];
+  const rest = [...NAV.filter((n) => !BOTTOM.includes(n.to)), { to: "/discover", label: "Discover", icon: "search" }, { to: "/learn/videos", label: "Video Library", icon: "play" }, { to: "/pricing", label: "Pricing", icon: "trophy" }, { to: "/account", label: "Account", icon: "shield" }];
   return (
     <>
       <AnimatePresence>
@@ -113,8 +114,9 @@ export default function Nav({ onSearch }: { onSearch: () => void }) {
           <button onClick={onSearch} className="btn-ghost !px-3 !py-2 flex items-center gap-2 text-sm text-muted" aria-label="Search (Ctrl+K)">
             <Icon name="search" className="w-4 h-4" />
             <span className="hidden sm:inline">Search</span>
-            <kbd className="hidden md:inline text-[10px] border border-line rounded px-1">Ctrl K</kbd>
+            <kbd className="hidden 2xl:inline text-[10px] border border-line rounded px-1">Ctrl K</kbd>
           </button>
+          <PlanBadge className="hidden md:inline-flex" />
           <Link to="/profile" className="hidden sm:inline-flex chip !text-cyan whitespace-nowrap" title="Your level">
             {level.name} · {xp} XP
           </Link>

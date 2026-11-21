@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { candles, pattern, rsi, sma } from "../lib/sim";
 import { inr } from "./ui";
+import { useAccount } from "../lib/account";
+import { Link } from "react-router-dom";
 
 /** Interactive candlestick practice chart using SIMULATED prices. */
 export default function CandleChart({ seed = 7, n = 70 }: { seed?: number; n?: number }) {
@@ -10,6 +12,8 @@ export default function CandleChart({ seed = 7, n = 70 }: { seed?: number; n?: n
   const [showMA, setShowMA] = useState(true);
   const [showPat, setShowPat] = useState(true);
   const [showRSI, setShowRSI] = useState(false);
+  const { features } = useAccount();
+  const adv = features.advancedIndicators;
 
   const W = 820, H = 300, VOL = 60, RS = showRSI ? 80 : 0, PAD = 8, AX = 58;
   const hi = Math.max(...data.map((d) => d.h));
@@ -21,7 +25,7 @@ export default function CandleChart({ seed = 7, n = 70 }: { seed?: number; n?: n
   const rs = rsi(data.map((d) => d.c), 14);
   const total = H + VOL + RS + 20;
   const cur = hover !== null ? data[hover] : data[data.length - 1];
-  const curPat = hover !== null ? pattern(data, hover) : null;
+  const curPat = hover !== null && adv ? pattern(data, hover) : null;
 
   const maPath = ma20.map((v, i) => (v == null ? "" : `${ma20[i - 1] == null ? "M" : "L"}${i * cw + cw / 2},${y(v)}`)).join(" ");
   const rsY = (v: number) => H + VOL + 20 + (1 - v / 100) * (RS - 10);
@@ -37,8 +41,12 @@ export default function CandleChart({ seed = 7, n = 70 }: { seed?: number; n?: n
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           <button className={`chip ${showMA ? "!text-cyan !border-cyan/50" : ""}`} onClick={() => setShowMA((v) => !v)} aria-pressed={showMA}>20 SMA</button>
-          <button className={`chip ${showPat ? "!text-violet !border-violet/50" : ""}`} onClick={() => setShowPat((v) => !v)} aria-pressed={showPat}>Patterns</button>
-          <button className={`chip ${showRSI ? "!text-emerald !border-emerald/50" : ""}`} onClick={() => setShowRSI((v) => !v)} aria-pressed={showRSI}>RSI 14</button>
+          {adv ? (
+            <>
+              <button className={`chip ${showPat ? "!text-violet !border-violet/50" : ""}`} onClick={() => setShowPat((v) => !v)} aria-pressed={showPat}>Patterns</button>
+              <button className={`chip ${showRSI ? "!text-emerald !border-emerald/50" : ""}`} onClick={() => setShowRSI((v) => !v)} aria-pressed={showRSI}>RSI 14</button>
+            </>
+          ) : <Link to="/pricing?highlight=pro" className="chip" title="Advanced indicators are part of FINOVA Pro">🔒 Patterns · RSI (Pro)</Link>}
           <button className="chip" onClick={() => setS((x) => x + 1)}>New chart</button>
         </div>
       </div>
@@ -59,7 +67,7 @@ export default function CandleChart({ seed = 7, n = 70 }: { seed?: number; n?: n
           const up = d.c >= d.o;
           const col = up ? "var(--emerald)" : "var(--rose)";
           const x = i * cw + cw / 2;
-          const p = showPat ? pattern(data, i) : null;
+          const p = adv && showPat ? pattern(data, i) : null;
           return (
             <g key={i} onMouseEnter={() => setHover(i)} onTouchStart={() => setHover(i)}>
               <rect x={i * cw} y={0} width={cw} height={total} fill={hover === i ? "var(--card-strong)" : "transparent"} />
@@ -71,7 +79,7 @@ export default function CandleChart({ seed = 7, n = 70 }: { seed?: number; n?: n
           );
         })}
         {showMA && <path d={maPath} fill="none" stroke="var(--cyan)" strokeWidth={1.6} />}
-        {showRSI && (
+        {adv && showRSI && (
           <g>
             <line x1={0} x2={W - AX} y1={rsY(70)} y2={rsY(70)} stroke="var(--rose)" strokeDasharray="4 4" opacity={0.6} />
             <line x1={0} x2={W - AX} y1={rsY(30)} y2={rsY(30)} stroke="var(--emerald)" strokeDasharray="4 4" opacity={0.6} />

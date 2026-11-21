@@ -1,6 +1,6 @@
 // FINOVA API: separate services for market data, mutual funds, news, educational videos and AI.
-// Auth, portfolio, watchlists, paper trading and wallet records live client-side for now (localStorage),
-// with a Supabase/PostgreSQL schema (supabase/schema.sql, Row Level Security) ready for cloud sync.
+// Accounts, memberships and billing live server-side (server/account). Portfolio, watchlists, paper trading and
+// wallet records still live client-side (localStorage); supabase/schema.sql is ready for cloud sync.
 import express from "express";
 import cors from "cors";
 import path from "node:path";
@@ -11,12 +11,15 @@ import * as funds from "./services/funds.js";
 import { chat, aiProvider } from "./services/ai.js";
 import { videos, youtubeEnabled } from "./services/videos.js";
 import { POPULAR_FUNDS, INDEX_FUNDS, UNIVERSE } from "./data/universe.js";
+import { mountAccount, mountWebhooks, takeTicket } from "./account/routes.js";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const app = express();
 app.disable("x-powered-by");
 app.use(cors({ origin: [/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/] }));
+mountWebhooks(app); // raw-body payment webhooks must be registered before JSON parsing
 app.use(express.json({ limit: "96kb" }));
+mountAccount(app);
 
 const wrap = (fn) => async (req, res) => {
   try {
@@ -78,6 +81,7 @@ app.post("/api/chat", async (req, res) => {
   const raw = Array.isArray(req.body?.messages) ? req.body.messages : [];
   const messages = raw.filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string").slice(-12).map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
   if (!messages.length || messages.at(-1).role !== "user") return res.status(400).json({ error: "Please enter a question." });
+  if (!takeTicket(String(req.body?.ticket ?? ""))) return res.status(429).json({ error: "Daily FINOVA AI limit reached or missing ticket.", quota: true });
   const mode = ["learning", "research", "planner"].includes(req.body?.mode) ? req.body.mode : "learning";
   const context = typeof req.body?.context === "string" ? req.body.context : "";
   const out = await chat({ messages, mode, context });

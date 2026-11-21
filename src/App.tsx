@@ -6,6 +6,7 @@ import Search from "./components/Search";
 import Footer from "./components/Footer";
 import ReminderToasts from "./components/ReminderToasts";
 import type { AcademyId } from "./data/types";
+import { refreshAccount } from "./lib/account";
 
 const Home = lazy(() => import("./pages/Home"));
 const Learn = lazy(() => import("./pages/Learn"));
@@ -25,6 +26,11 @@ const Investments = lazy(() => import("./pages/Investments"));
 const Discover = lazy(() => import("./pages/Discover"));
 const Wallet = lazy(() => import("./pages/Wallet"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const Account = lazy(() => import("./pages/Account"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const MasterclassList = lazy(() => import("./pages/Masterclasses").then((m) => ({ default: m.MasterclassList })));
+const MasterclassView = lazy(() => import("./pages/Masterclasses").then((m) => ({ default: m.MasterclassView })));
 
 const ACADEMIES: AcademyId[] = ["stocks", "mutual-funds", "trading", "investments"];
 
@@ -50,6 +56,7 @@ function ScrollProgress() {
 export default function App() {
   const loc = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
+  useEffect(() => { refreshAccount(); }, []);
 
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
@@ -88,12 +95,17 @@ export default function App() {
               <Route path="/wallet" element={<Wallet />} />
               <Route path="/learn" element={<Learn />} />
               <Route path="/learn/videos" element={<Videos />} />
+              <Route path="/learn/masterclasses" element={<MasterclassList />} />
+              <Route path="/learn/masterclasses/:id" element={<MasterclassView />} />
               <Route path="/learn/:academy" element={<AcademyRoute />} />
               <Route path="/learn/:academy/:lessonId" element={<LessonPage />} />
               <Route path="/business" element={<Business />} />
               <Route path="/business/:id" element={<BusinessDetail />} />
               <Route path="/ai" element={<AiPage />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/account" element={<Account />} />
+              <Route path="/checkout" element={<Checkout />} />
               {/* Old addresses from FINOVA 1.x */}
               <Route path="/mutual-funds" element={<Navigate to="/learn/mutual-funds" replace />} />
               <Route path="/trading" element={<Navigate to="/learn/trading" replace />} />

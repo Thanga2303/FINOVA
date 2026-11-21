@@ -13,6 +13,7 @@ import { monthSummary, thisMonth } from "../lib/wallet";
 import { Change, DataBadge, level, price } from "../components/market/bits";
 import FloatingDashboard from "../components/FloatingDashboard";
 import MissionPillars, { TrustStrip } from "../components/MissionPillars";
+import { AdSlot } from "../components/Membership";
 
 export function HomeMarket() {
   const { data, error } = useApi<Overview>("/api/market/overview", { poll: 60e3, maxAge: 55e3 });
@@ -223,6 +224,7 @@ export default function Home() {
       <FloatingDashboard market={market} />
 
       <MissionPillars market={market} />
+      <AdSlot index={0} className="mt-10" />
 
       {/* SCROLL INTRO TO CATEGORIES */}
       <section id="explore" ref={exploreRef} className="relative mt-28 scroll-mt-24 overflow-x-clip" style={{ perspective: 1200 }}>

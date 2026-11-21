@@ -6,16 +6,34 @@ import Quiz from "../components/Quiz";
 import VideoPanel from "../components/VideoPanel";
 import ToolEmbed from "../components/ToolEmbed";
 import NotFound from "./NotFound";
+import { Locked } from "../components/Membership";
+import { useAccount } from "../lib/account";
 
 export default function LessonPage() {
   const { academy = "", lessonId = "" } = useParams();
   const lesson = lessonById(lessonId);
   const a = academyById(academy);
   const done = useStore((s) => Boolean(lesson && s.completed[lesson.id]));
+  const { features, loaded } = useAccount();
   if (!lesson || !a || lesson.academy !== a.id) return <NotFound />;
   const next = nextLesson(lesson);
   const prev = prevLesson(lesson);
   const idx = a.lessons.findIndex((l) => l.id === lesson.id);
+  if (loaded && !features.academyLevels.includes(lesson.level)) {
+    return (
+      <Page>
+        <nav className="text-sm text-muted flex flex-wrap items-center gap-2" aria-label="Breadcrumb">
+          <Link to="/learn" className="hover:text-text">Learn</Link><span>/</span><Link to={`/learn/${a.id}`} className="hover:text-text">{a.name}</Link>
+        </nav>
+        <div className="max-w-3xl mt-6">
+          <div className="flex gap-2"><LevelBadge level={lesson.level} /><span className="chip">{lesson.minutes} min read</span></div>
+          <h1 className="font-display text-4xl sm:text-5xl font-semibold mt-4 leading-tight">{lesson.title}</h1>
+          <p className="text-lg text-muted mt-4">{lesson.summary}</p>
+          <div className="mt-8"><Locked plan="pro" title={`${lesson.level} lessons are part of FINOVA Pro`} text="Free members get every Beginner lesson. Pro unlocks all 65 lessons, quizzes and videos across the four academies." /></div>
+        </div>
+      </Page>
+    );
+  }
 
   return (
     <Page>

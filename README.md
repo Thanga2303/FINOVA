@@ -68,6 +68,29 @@ Development with hot reload: `npm run dev` (Vite on :5173, API on :3000).
 
 Keys are read only by the server and never reach the browser. Without AI keys, FINOVA AI still runs its calculators, planner, research summaries and lesson library offline.
 
+## Memberships & billing
+
+| Plan | Price | Highlights |
+|---|---|---|
+| Free | ₹0 | Paper trading, basic charts, Beginner lessons, basic analytics, 10 AI questions/day, basic journal (20 entries), promotional cards |
+| FINOVA Pro | ₹149/month | Advanced indicators, all 65 lessons, advanced portfolio & trading analytics, full journal, 100 AI questions/day, ad-free |
+| FINOVA Elite | ₹299/month | Masterclasses, detailed performance reports with CSV, portfolio insights, 400 AI questions/day, ad-free |
+
+Plans are defined once in `server/account/plans.js`.
+
+**How it is secured**
+
+- Accounts: email + password (scrypt), opaque session tokens in HttpOnly SameSite cookies, rate-limited sign-in, cross-site request blocking.
+- The plan is never read from the browser. `/api/auth/me` returns entitlements computed from the server's subscription record, and every gated endpoint (AI quota tickets, portfolio insights, trading reports, masterclasses) re-checks the plan on the server.
+- **Razorpay (web):** the server creates the subscription, verifies the Checkout signature (HMAC with the key secret) **and** re-fetches the subscription from Razorpay's API before activating. Renewals, failures and cancellations arrive via webhooks verified with the webhook secret, de-duplicated by event id. Upgrades cancel the previous subscription to avoid double billing.
+- **Google Play (Android):** the app passes the purchase token; the server verifies it with Google (`purchases.subscriptionsv2.get`), checks the obfuscated account id matches the FINOVA user, and acknowledges it. Real-time developer notifications are re-verified with Google, never trusted as-is.
+- **Test mode:** `BILLING_TEST_MODE=true` enables a clearly labelled “activate without payment” checkout for development. Keep it `false` in production.
+- Lifecycle: cancellations take effect at period end, downgrades are scheduled for renewal, late renewals get a 3-day grace period, history and invoices are recorded.
+
+Account data is stored by the server in `data/finova-db.json` (git-ignored). `supabase/schema.sql` includes matching `subscriptions`, `billing_events`, `invoices` and `ai_usage` tables (read-own RLS, server-only writes) for moving to Supabase.
+
+**Going live:** create ₹149 and ₹299 monthly Plans in Razorpay, set `RAZORPAY_*` keys and the webhook secret (webhook URL `/api/billing/webhook/razorpay`), test end to end with Razorpay test keys, then switch to live keys and set `BILLING_TEST_MODE=false`. For international customers, a merchant-of-record provider (e.g. Paddle) can be added as another provider later.
+
 ## Trust and safety
 
 - **Education, not advice.** FINOVA isn't a SEBI-registered adviser or broker. No buy/sell recommendations, price predictions or guaranteed returns.

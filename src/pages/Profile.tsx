@@ -5,6 +5,28 @@ import { cloudStatus } from "../lib/cloud";
 import { healthFromState } from "../lib/wallet";
 import { Icon, Page, Ring } from "../components/ui";
 import DashboardBody from "./Dashboard";
+import { planLabel, useAccount } from "../lib/account";
+
+function MembershipCard() {
+  const { user, plan, status } = useAccount();
+  const sub = status?.subscription;
+  return (
+    <section className="mb-6 glass rounded-3xl p-5 flex flex-wrap items-center justify-between gap-4">
+      <div className="flex items-center gap-4">
+        <span className={`w-12 h-12 rounded-2xl grid place-items-center font-display font-bold ${plan.id === "elite" ? "bg-amber/15 text-amber" : plan.id === "pro" ? "bg-cyan/15 text-cyan" : "bg-card-strong text-muted"}`}>{plan.id === "free" ? "F" : plan.id === "pro" ? "P" : "E"}</span>
+        <div>
+          <div className="text-xs text-muted">Membership</div>
+          <div className="font-display text-xl font-semibold">{plan.name}{sub?.test ? <span className="chip !text-amber ml-2 align-middle">Test</span> : null}</div>
+          <div className="text-xs text-muted">{!user ? "Not signed in" : sub ? `${sub.cancelAtPeriodEnd ? "Ends" : "Renews"} ${new Date(sub.currentPeriodEnd).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}${sub.scheduledPlan && sub.scheduledPlan !== "free" ? ` · then ${planLabel(sub.scheduledPlan)}` : ""}` : `Signed in as ${user.email}`}</div>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Link to={user ? "/account" : "/account?mode=signin"} className="btn-ghost !py-2 text-sm">{user ? "Billing dashboard" : "Sign in"}</Link>
+        {plan.id !== "elite" && <Link to="/pricing" className="btn-primary !py-2 text-sm">Upgrade</Link>}
+      </div>
+    </section>
+  );
+}
 
 const TABS = [["progress", "Learning progress"], ["finance", "Financial profile"], ["privacy", "Privacy & data"]] as const;
 
@@ -94,6 +116,7 @@ export default function Profile() {
   const tab = params.get("tab") ?? "progress";
   return (
     <Page>
+      <MembershipCard />
       <div className="mb-6 flex gap-1 overflow-x-auto scroll-thin rounded-full border border-line p-1 w-full sm:w-fit" role="tablist">
         {TABS.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setParams({ tab: id })} className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold ${tab === id ? "bg-cyan text-[#04121c]" : "text-muted hover:text-text"}`}>{label}</button>)}
       </div>

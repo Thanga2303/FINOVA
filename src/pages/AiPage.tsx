@@ -10,6 +10,7 @@ import Markdown from "../components/Markdown";
 import { Icon, inr, Page } from "../components/ui";
 import { OrbLite, type OrbState } from "../components/OrbLite";
 import { listen, speak, speechInputSupported, speechOutputSupported, stopSpeaking } from "../lib/voice";
+import { account, refreshAccount, useAccount } from "../lib/account";
 
 const AiOrb = lazy(() => import("../three/AiOrb"));
 const VKEY = "finova.voiceReplies";
@@ -113,12 +114,17 @@ export default function AiPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const ticketRef = useRef<string | null>(null);
+  const { status: acct, plan: memberPlan } = useAccount();
+
   async function llm(t: string, m: Mode, context: string, history: Msg[]) {
-    if (provider === "offline") return null;
+    if (provider === "offline" || !ticketRef.current) return null;
+    const ticket = ticketRef.current;
+    ticketRef.current = null;
     try {
       const r = await fetch("/api/chat", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: m, context, messages: [...history.filter((x) => x.content !== WELCOME.content).slice(-10).map(({ role, content }) => ({ role, content })), { role: "user", content: t }] }),
+        body: JSON.stringify({ ticket, mode: m, context, messages: [...history.filter((x) => x.content !== WELCOME.content).slice(-10).map(({ role, content }) => ({ role, content })), { role: "user", content: t }] }),
       });
       const j = await r.json().catch(() => ({}));
       return r.ok && j.reply ? (j.reply as string) : null;
@@ -128,6 +134,18 @@ export default function AiPage() {
   async function send(text: string) {
     const t = text.trim();
     if (!t || busy) return;
+    // Every question uses one of today's FINOVA AI questions; the server enforces the plan's daily limit.
+    try {
+      const tk = await account.aiTicket();
+      ticketRef.current = tk.ticket;
+      refreshAccount();
+    } catch (e) {
+      setMsgs((m) => [...m, { role: "user", content: t, mode }, { role: "assistant", content: `${(e as Error).message}
+
+[Compare plans](/pricing)`, source: "FINOVA membership" }]);
+      setInput("");
+      return;
+    }
     markTool("ai");
     const history = msgs;
     setMsgs((m) => [...m, { role: "user", content: t, mode }]);
@@ -181,7 +199,7 @@ export default function AiPage() {
                 <OrbLite state={orbState} size={40} />
                 <div>
                   <h1 className="font-display text-lg font-semibold">FINOVA AI</h1>
-                  <div className="text-xs text-muted"><span className="capitalize text-cyan">{orbState}</span> · {provider === null ? "Connecting…" : provider === "offline" ? "Offline mode: calculators, planner, research and lesson library" : "Online · education, not advice"}</div>
+                  <div className="text-xs text-muted"><span className="capitalize text-cyan">{orbState}</span> · {acct ? `${acct.ai.used}/${acct.ai.limit} today (${memberPlan.name}) · ` : ""}{provider === null ? "Connecting…" : provider === "offline" ? "Offline mode: calculators, planner, research and lesson library" : "Online · education, not advice"}</div>
                 </div>
               </div>
               <button className="chip" onClick={() => setMsgs([WELCOME])}>New chat</button>

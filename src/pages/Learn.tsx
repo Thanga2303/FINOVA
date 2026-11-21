@@ -6,6 +6,8 @@ import { useStore } from "../lib/store";
 import { Icon, LevelBadge, Page, Reveal, Ring, SectionHead } from "../components/ui";
 import DailyChallenge from "../components/DailyChallenge";
 import ConceptLab from "../components/ConceptLab";
+import { AdSlot } from "../components/Membership";
+import { useAccount } from "../lib/account";
 import { TiltCard } from "../components/fx";
 import { LEVELS as XP_LEVELS, levelFor } from "../lib/store";
 
@@ -23,6 +25,7 @@ export default function Learn() {
   );
   const done = Object.keys(completed).length;
   const xp = useStore((s) => s.xp);
+  const { features } = useAccount();
   const { level: lvl, next } = levelFor(xp);
 
   return (
@@ -79,6 +82,12 @@ export default function Learn() {
 
       <div className="mt-8"><ConceptLab /></div>
 
+      <Link to="/learn/masterclasses" className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-amber/30 bg-gradient-to-r from-amber/10 via-transparent to-violet/10 p-6 hover:border-amber/60 transition-colors">
+        <div><div className="text-xs font-semibold tracking-[0.2em] uppercase text-amber">FINOVA Elite</div><div className="font-display text-2xl font-semibold mt-1">Masterclasses</div><p className="text-sm text-muted mt-1">Annual reports, allocation plans and position sizing, in depth.</p></div>
+        <span className="chip !text-amber">Explore →</span>
+      </Link>
+      <AdSlot index={1} className="mt-6" />
+
       <div className="mt-14 flex flex-wrap items-center gap-2">
         {LEVELS.map((lv) => (
           <button key={lv} onClick={() => setLevel(lv)} className={`chip !text-sm !px-4 !py-2 ${level === lv ? "!text-text !border-cyan/60 !bg-card-strong" : ""}`} aria-pressed={level === lv}>{lv}</button>
@@ -96,7 +105,7 @@ export default function Learn() {
           <Link key={l.id} to={lessonPath(l)} className="group rounded-2xl border border-line bg-card p-5 hover:bg-card-strong transition-colors">
             <div className="flex items-center justify-between gap-2">
               <LevelBadge level={l.level} />
-              {completed[l.id] ? <span className="chip !text-emerald"><Icon name="check" className="w-3.5 h-3.5" /> Done</span> : <span className="text-xs text-muted">{l.minutes} min</span>}
+              {completed[l.id] ? <span className="chip !text-emerald"><Icon name="check" className="w-3.5 h-3.5" /> Done</span> : !features.academyLevels.includes(l.level) ? <span className="chip !text-cyan">Pro</span> : <span className="text-xs text-muted">{l.minutes} min</span>}
             </div>
             <h3 className="font-semibold mt-3 group-hover:text-cyan">{l.title}</h3>
             <p className="text-sm text-muted mt-1 line-clamp-2">{l.summary}</p>

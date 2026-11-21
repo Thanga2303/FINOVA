@@ -186,3 +186,68 @@ create policy "goal_contributions_insert_own" on public.goal_contributions for i
 
 -- Anonymous users get no access at all.
 revoke all on all tables in schema public from anon;
+
+-- ============================================================================
+-- Memberships & billing (mirrors server/account; for a future move to Supabase)
+-- Members may READ their own rows. Only the server (service role) may write,
+-- after verifying payments with Razorpay / Google Play. No INSERT/UPDATE/DELETE
+-- policies exist for authenticated users, so the browser can never grant itself a plan.
+-- ============================================================================
+create table if not exists public.subscriptions (
+  user_id              uuid primary key references auth.users(id) on delete cascade,
+  plan                 text not null check (plan in ('free','pro','elite')),
+  status               text not null check (status in ('active','trialing','past_due','canceled','expired')),
+  provider             text not null check (provider in ('razorpay','google_play','test')),
+  provider_ref         text,
+  test                 boolean not null default false,
+  current_period_start timestamptz not null,
+  current_period_end   timestamptz not null,
+  cancel_at_period_end boolean not null default false,
+  scheduled_plan       text check (scheduled_plan in ('free','pro','elite')),
+  started_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now()
+);
+
+create table if not exists public.billing_events (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  type       text not null,
+  detail     jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.invoices (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  plan         text not null,
+  amount_paise integer not null check (amount_paise >= 0),
+  currency     text not null default 'INR',
+  provider     text not null,
+  provider_ref text,
+  status       text not null,
+  test         boolean not null default false,
+  period_end   timestamptz,
+  created_at   timestamptz not null default now()
+);
+
+create table if not exists public.ai_usage (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  day     date not null,
+  count   integer not null default 0,
+  primary key (user_id, day)
+);
+
+create index if not exists billing_events_user_time on public.billing_events (user_id, created_at desc);
+create index if not exists invoices_user_time on public.invoices (user_id, created_at desc);
+
+do $$
+declare t text;
+begin
+  foreach t in array array['subscriptions','billing_events','invoices','ai_usage'] loop
+    execute format('alter table public.%I enable row level security', t);
+    execute format('alter table public.%I force row level security', t);
+    execute format('drop policy if exists "%s_select_own" on public.%I', t, t);
+    execute format('create policy "%s_select_own" on public.%I for select to authenticated using (user_id = (select auth.uid()))', t, t);
+    execute format('revoke insert, update, delete, truncate on public.%I from anon, authenticated', t);
+  end loop;
+end $$;

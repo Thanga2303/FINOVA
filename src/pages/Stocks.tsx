@@ -6,6 +6,7 @@ import { Avatar, Change, crore, DataBadge, Drawer, ErrorNote, LearnButton, level
 import StockSearch from "../components/market/StockSearch";
 import NewsList from "../components/market/NewsList";
 import VideoPanel from "../components/VideoPanel";
+import { AdSlot } from "../components/Membership";
 
 const MarketField = lazy(() => import("../three/MarketField"));
 
@@ -181,6 +182,7 @@ export default function Stocks() {
         </>
       )}
 
+      <AdSlot index={2} className="mt-8" />
       <section className="mt-8 grid lg:grid-cols-[1.4fr_1fr] gap-6 items-start">
         <div className="glass rounded-3xl p-5"><h2 className="font-semibold mb-3">Market news</h2><NewsList q="India stock market Sensex Nifty" count={8} /></div>
         <div className="glass rounded-3xl p-5">

@@ -6,7 +6,7 @@ import { Icon } from "./ui";
 const COLUMNS: { title: string; links: [string, string][] }[] = [
   { title: "Invest", links: [["Stocks", "/stocks"], ["Mutual Funds", "/funds"], ["Compare funds", "/funds/compare"], ["Discover", "/discover"], ["Portfolio", "/investments"], ["Watchlists", "/investments?tab=watchlists"]] },
   { title: "Learn", links: [["Academies", "/learn"], ["Video library", "/learn/videos"], ["Business ideas", "/business"], ["FINOVA AI", "/ai"]] },
-  { title: "Money", links: [["Smart Wallet", "/wallet"], ["Goals", "/wallet?tab=goals"], ["Health score", "/wallet?tab=health"], ["Profile & data", "/profile?tab=privacy"]] },
+  { title: "Money", links: [["Smart Wallet", "/wallet"], ["Goals", "/wallet?tab=goals"], ["Health score", "/wallet?tab=health"], ["Profile & data", "/profile?tab=privacy"], ["Pricing", "/pricing"], ["Billing", "/account"]] },
 ];
 
 export default function Footer() {

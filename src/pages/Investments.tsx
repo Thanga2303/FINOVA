@@ -7,9 +7,13 @@ import { PAPER_CASH, setState, uid, useStore, type Holding } from "../lib/store"
 import { inr, Page } from "../components/ui";
 import { Avatar, Change, DataBadge, ErrorNote, price, Sparkline } from "../components/market/bits";
 import StockSearch from "../components/market/StockSearch";
+import Journal from "../components/Journal";
+import TradingAnalytics, { type PortfolioInsight } from "../components/TradingAnalytics";
+import { AdSlot, FeatureGate, Locked } from "../components/Membership";
+import { useAccount } from "../lib/account";
 
 const AllocationDonut = lazy(() => import("../three/AllocationDonut"));
-const TABS = [{ id: "portfolio", label: "Portfolio" }, { id: "orders", label: "Orders" }, { id: "watchlists", label: "Watchlists" }] as const;
+const TABS = [{ id: "portfolio", label: "Portfolio" }, { id: "orders", label: "Orders & analytics" }, { id: "journal", label: "Journal" }, { id: "watchlists", label: "Watchlists" }] as const;
 const PIE = ["#00D4FF", "#00E6A0", "#8B5CF6", "#FBBF24", "#FB7185", "#38BDF8", "#F472B6", "#94A3B8"];
 
 function assetClass(h: Holding) {
@@ -116,6 +120,7 @@ function AddManual() {
 }
 
 function Portfolio() {
+  const { features } = useAccount();
   const paper = useStore((s) => s.paper);
   const manual = useStore((s) => s.manual);
   const [view, setView] = useState<"paper" | "manual" | "all">("all");
@@ -164,6 +169,7 @@ function Portfolio() {
         </div>
       ) : (
         <>
+          <FeatureGate allow={(f) => f.portfolioAnalytics !== "basic"} plan="pro" title="Advanced portfolio analytics" text="Value history, the 3D allocation view and diversification metrics are part of FINOVA Pro.">
           <div className="grid lg:grid-cols-[1.5fr_1fr] gap-6">
             <div className="glass rounded-3xl p-5 min-w-0">
               <h3 className="font-semibold">Value of current holdings over the past year</h3>
@@ -201,7 +207,9 @@ function Portfolio() {
               </div>
             </div>
           </div>
-
+            <PortfolioInsights holdings={holdings.map((h) => ({ ...h, price: px[h.symbol] ?? h.avg }))} />
+          </FeatureGate>
+          {!features.adFree && <AdSlot index={0} />}
           {(["stock", "fund"] as const).map((kind) => {
             const list = rows.filter((r) => r.h.kind === kind);
             if (!list.length) return null;
@@ -345,7 +353,44 @@ export default function Investments() {
       <div className="mt-6 flex gap-1 rounded-full border border-line p-1 w-fit" role="tablist">
         {TABS.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setParams({ tab: t.id })} className={`px-4 py-2 rounded-full text-sm font-semibold ${tab === t.id ? "bg-cyan text-[#04121c]" : "text-muted hover:text-text"}`}>{t.label}</button>)}
       </div>
-      <div className="mt-6">{tab === "orders" ? <Orders /> : tab === "watchlists" ? <Watchlists /> : <Portfolio />}</div>
+      <div className="mt-6">{tab === "orders" ? <div className="space-y-6"><TradingAnalytics /><Orders /></div> : tab === "journal" ? <Journal /> : tab === "watchlists" ? <Watchlists /> : <Portfolio />}</div>
     </Page>
+  );
+}
+
+type PortfolioMetrics = { total: number; byClass: { name: string; value: number; weight: number }[]; topWeight: number; effectiveHoldings: number; diversificationScore: number; winners: number; losers: number; insights?: PortfolioInsight[] };
+
+/** Server-computed portfolio metrics (Pro) and insights (Elite). */
+function PortfolioInsights({ holdings }: { holdings: (Holding & { price: number })[] }) {
+  const { plan } = useAccount();
+  const [m, setM] = useState<PortfolioMetrics | null>(null);
+  const key = holdings.map((h) => `${h.symbol}:${h.qty}:${Math.round(h.price)}`).join("|");
+  useEffect(() => {
+    fetch("/api/analytics/portfolio", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ holdings }) })
+      .then((r) => (r.ok ? r.json() : null)).then(setM).catch(() => setM(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, plan.id]);
+  if (!m) return null;
+  return (
+    <div className="grid lg:grid-cols-[1fr_1.4fr] gap-6 mt-6">
+      <div className="glass rounded-3xl p-5">
+        <h3 className="font-semibold mb-3">Diversification</h3>
+        <div className="flex items-end gap-3"><span className="font-display text-4xl font-semibold">{m.diversificationScore}</span><span className="text-muted text-sm mb-1">/ 100</span></div>
+        <div className="h-2 rounded-full bg-line mt-2 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-rose via-amber to-emerald" style={{ width: `${m.diversificationScore}%` }} /></div>
+        <ul className="mt-4 space-y-1.5 text-sm">
+          <li className="flex justify-between"><span className="text-muted">Largest position</span><span>{(m.topWeight * 100).toFixed(1)}%</span></li>
+          <li className="flex justify-between"><span className="text-muted">Behaves like</span><span>{m.effectiveHoldings.toFixed(1)} equal holdings</span></li>
+          <li className="flex justify-between"><span className="text-muted">Above / below cost</span><span>{m.winners} / {m.losers}</span></li>
+        </ul>
+        <p className="text-[11px] text-faint mt-3">FINOVA's educational score from position weights and asset types.</p>
+      </div>
+      {m.insights ? (
+        <div className="glass rounded-3xl p-5">
+          <h3 className="font-semibold mb-3">Portfolio insights <span className="chip !text-amber ml-1">Elite</span></h3>
+          <ul className="space-y-2">{m.insights.map((i, k) => <li key={k} className={`rounded-2xl border p-3 text-sm ${i.level === "warn" ? "border-amber/40 bg-amber/5" : "border-line bg-card"}`}>{i.text}</li>)}</ul>
+          <p className="text-[11px] text-faint mt-3">Educational observations, not recommendations.</p>
+        </div>
+      ) : <Locked compact plan="elite" title="Advanced portfolio insights" text="Elite explains concentration, asset mix and risk in plain language." />}
+    </div>
   );
 }
