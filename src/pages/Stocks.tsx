@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { cleanSym, fmtTime, useApi, type Chart, type Overview, type Quote } from "../lib/api";
 import { Page, Icon } from "../components/ui";
@@ -6,6 +6,8 @@ import { Avatar, Change, crore, DataBadge, Drawer, ErrorNote, LearnButton, level
 import StockSearch from "../components/market/StockSearch";
 import NewsList from "../components/market/NewsList";
 import VideoPanel from "../components/VideoPanel";
+
+const MarketField = lazy(() => import("../three/MarketField"));
 
 function IndexCard({ q }: { q: Overview["indices"][number] }) {
   const { data } = useApi<Chart>(`/api/market/chart/${encodeURIComponent(q.symbol)}?range=1d`, { poll: 60e3, maxAge: 55e3 });
@@ -112,6 +114,35 @@ export default function Stocks() {
               <div className="bg-rose" style={{ width: `${(data.breadth.decliners / data.breadth.universe) * 100}%` }} />
             </div>
             <div className="mt-2 flex justify-between text-sm"><span className="text-emerald">{data.breadth.advancers} advancing</span><span className="text-rose">{data.breadth.decliners} declining</span></div>
+            {(() => {
+              const avg = data.stocks.reduce((a, s) => a + Math.abs(s.changePct ?? 0), 0) / Math.max(1, data.stocks.length);
+              const mood = avg < 0.6 ? ["Calm", "text-emerald"] : avg < 1.4 ? ["Moderate", "text-amber"] : ["Volatile", "text-rose"];
+              const fieldStocks = data.stocks.map((s) => ({ symbol: s.symbol, label: cleanSym(s.symbol), changePct: s.changePct ?? 0 }));
+              return (
+                <div className="mt-5 grid lg:grid-cols-[1fr_260px] gap-5 items-stretch">
+                  <div className="relative h-[340px] sm:h-[400px] rounded-2xl border border-line bg-bg2/40 overflow-hidden">
+                    <Suspense fallback={<div className="h-full grid place-items-center text-sm text-muted">Loading 3D market field…</div>}>
+                      <MarketField stocks={fieldStocks} onPick={(s) => nav(`/stocks/${encodeURIComponent(s)}`)}
+                        fallback={<div className="h-full p-4 grid grid-cols-8 sm:grid-cols-[repeat(13,minmax(0,1fr))] gap-1 content-center">{[...fieldStocks].sort((a, b) => a.changePct - b.changePct).map((s) => <Link key={s.symbol} to={`/stocks/${encodeURIComponent(s.symbol)}`} title={`${s.label} ${s.changePct.toFixed(2)}%`} className="h-8 rounded text-[9px] grid place-items-center font-semibold" style={{ background: s.changePct >= 0 ? `rgba(0,230,160,${0.15 + Math.min(0.7, Math.abs(s.changePct) / 4)})` : `rgba(225,29,72,${0.15 + Math.min(0.7, Math.abs(s.changePct) / 4)})` }}>{s.label.slice(0, 5)}</Link>)}</div>} />
+                    </Suspense>
+                    <div className="absolute left-3 top-3 text-[11px] text-muted bg-bg2/70 rounded-lg px-2 py-1">Each bar = one stock · height = today's % move · drag to rotate · click to open</div>
+                  </div>
+                  <div className="rounded-2xl border border-line p-4 flex flex-col gap-4">
+                    <div>
+                      <div className="text-xs text-muted">Market volatility today</div>
+                      <div className={`font-display text-2xl font-semibold ${mood[1]}`}>{mood[0]}</div>
+                      <div className="text-xs text-muted">Average move: {avg.toFixed(2)}% across tracked stocks</div>
+                      <div className="h-2 rounded-full bg-gradient-to-r from-emerald via-amber to-rose mt-2 relative"><span className="absolute -top-1 w-4 h-4 rounded-full bg-text border-2 border-bg" style={{ left: `calc(${Math.min(100, (avg / 2.5) * 100)}% - 8px)` }} /></div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted mb-1">Trend</div>
+                      <div className="text-sm">{data.breadth.advancers > data.breadth.decliners * 1.5 ? <span className="text-emerald font-semibold">Broadly bullish</span> : data.breadth.decliners > data.breadth.advancers * 1.5 ? <span className="text-rose font-semibold">Broadly bearish</span> : <span className="text-amber font-semibold">Mixed</span>} <span className="text-muted">({data.breadth.advancers} up / {data.breadth.decliners} down)</span></div>
+                    </div>
+                    <p className="text-[11px] text-faint mt-auto">Real delayed data from FINOVA's market service. Visual height is scaled to today's largest move.</p>
+                  </div>
+                </div>
+              );
+            })()}
           </section>
 
           <section className="mt-6 grid md:grid-cols-2 xl:grid-cols-4 gap-4">

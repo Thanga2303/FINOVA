@@ -88,7 +88,7 @@ export default function Nav({ onSearch }: { onSearch: () => void }) {
   };
 
   const linkCls = ({ isActive }: { isActive: boolean }) =>
-    `px-2.5 py-1.5 rounded-full text-[13px] font-medium transition-colors whitespace-nowrap ${isActive ? "text-text bg-card-strong" : "text-muted hover:text-text"}`;
+    `relative px-2.5 py-1.5 rounded-full text-[13px] font-medium transition-colors whitespace-nowrap ${isActive ? "text-text" : "text-muted hover:text-text"}`;
 
   return (
     <header className={`fixed top-0 inset-x-0 z-50 transition-all ${scrolled || open ? "glass header-solid border-x-0 border-t-0" : "border-b border-transparent"}`}>
@@ -97,7 +97,12 @@ export default function Nav({ onSearch }: { onSearch: () => void }) {
         <nav className="hidden xl:flex items-center gap-0.5 mx-auto" aria-label="Main">
           {NAV.map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === "/"} className={linkCls}>
-              {n.label}
+              {({ isActive }) => (
+                <>
+                  {isActive && <motion.span layoutId="nav-pill" className="absolute inset-0 rounded-full bg-card-strong border border-cyan/30 shadow-[0_0_18px_-6px_var(--cyan)]" transition={{ type: "spring", stiffness: 380, damping: 32 }} />}
+                  <span className="relative">{n.label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>

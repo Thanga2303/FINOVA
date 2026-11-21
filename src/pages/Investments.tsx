@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Area, AreaChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { cleanSym, fmtDate, fmtTime, getJSON, useApi, type Chart, type FundDetail, type FundRow, type FundSummary, type Meta, type Quote } from "../lib/api";
@@ -8,6 +8,7 @@ import { inr, Page } from "../components/ui";
 import { Avatar, Change, DataBadge, ErrorNote, price, Sparkline } from "../components/market/bits";
 import StockSearch from "../components/market/StockSearch";
 
+const AllocationDonut = lazy(() => import("../three/AllocationDonut"));
 const TABS = [{ id: "portfolio", label: "Portfolio" }, { id: "orders", label: "Orders" }, { id: "watchlists", label: "Watchlists" }] as const;
 const PIE = ["#00D4FF", "#00E6A0", "#8B5CF6", "#FBBF24", "#FB7185", "#38BDF8", "#F472B6", "#94A3B8"];
 
@@ -121,6 +122,7 @@ function Portfolio() {
   const holdings = view === "paper" ? paper.holdings : view === "manual" ? manual : [...paper.holdings, ...manual];
   const { px, chg, meta, error } = usePrices([...paper.holdings, ...manual]);
   const history = useHistory(holdings);
+  const [activeSlice, setActiveSlice] = useState<string | null>(null);
   useEffect(() => { if (Object.keys(px).length) checkLimitOrders(px); }, [px]);
 
   const rows = holdings.map((h) => {
@@ -181,18 +183,17 @@ function Portfolio() {
               </div>
             </div>
             <div className="glass rounded-3xl p-5">
-              <h3 className="font-semibold">Asset allocation</h3>
-              <div className="h-48">
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie data={alloc} dataKey="value" nameKey="name" innerRadius="55%" outerRadius="85%" paddingAngle={2} stroke="none">
-                      {alloc.map((_, i) => <Cell key={i} fill={PIE[i % PIE.length]} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ background: "var(--bg2)", border: "1px solid var(--line)", borderRadius: 12 }} formatter={(v, n) => [`${inr(Number(v))} (${((Number(v) / alloc.reduce((a, b) => a + b.value, 0)) * 100).toFixed(1)}%)`, n]} />
-                  </PieChart>
-                </ResponsiveContainer>
+              <div className="flex items-center justify-between"><h3 className="font-semibold">Asset allocation</h3><span className="text-[10px] text-faint">Drag to rotate · hover a slice</span></div>
+              <div className="h-56">
+                <Suspense fallback={<div className="h-full grid place-items-center text-xs text-muted">Loading 3D view…</div>}>
+                  <AllocationDonut slices={alloc.map((a, i) => ({ ...a, color: PIE[i % PIE.length] }))} active={activeSlice} setActive={setActiveSlice}
+                    fallback={<div className="h-48"> <ResponsiveContainer> <PieChart> <Pie data={alloc} dataKey="value" nameKey="name" innerRadius="55%" outerRadius="85%" paddingAngle={2} stroke="none"> {alloc.map((_, i) => <Cell key={i} fill={PIE[i % PIE.length]} />)} </Pie> <Tooltip contentStyle={{ background: "var(--bg2)", border: "1px solid var(--line)", borderRadius: 12 }} formatter={(v, n) => [`${inr(Number(v))} (${((Number(v) / alloc.reduce((a, b) => a + b.value, 0)) * 100).toFixed(1)}%)`, n]} /> </PieChart> </ResponsiveContainer> </div>} />
+                </Suspense>
               </div>
-              <ul className="grid grid-cols-2 gap-1.5 text-xs">{alloc.map((a, i) => <li key={a.name} className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: PIE[i % PIE.length] }} />{a.name}</li>)}</ul>
+              <ul className="grid grid-cols-2 gap-1.5 text-xs">{alloc.map((a, i) => {
+                const tot = alloc.reduce((x, y) => x + y.value, 0) || 1;
+                return <li key={a.name}><button onMouseEnter={() => setActiveSlice(a.name)} onMouseLeave={() => setActiveSlice(null)} onFocus={() => setActiveSlice(a.name)} onBlur={() => setActiveSlice(null)} className={`w-full flex items-center gap-2 rounded-lg px-1.5 py-1 text-left ${activeSlice === a.name ? "bg-card-strong" : ""}`}><span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PIE[i % PIE.length] }} /><span className="flex-1 truncate">{a.name}</span><span className="text-muted">{((a.value / tot) * 100).toFixed(1)}%</span></button></li>;
+              })}</ul>
               <div className="mt-4 space-y-1.5">
                 {byHolding.slice(0, 5).map((b) => (
                   <div key={b.name} className="text-xs"><div className="flex justify-between"><span className="truncate">{b.name}</span><span>{((b.value / current) * 100).toFixed(1)}%</span></div><div className="h-1.5 rounded-full bg-line mt-0.5"><div className="h-full rounded-full bg-violet" style={{ width: `${(b.value / current) * 100}%` }} /></div></div>

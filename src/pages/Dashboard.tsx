@@ -132,11 +132,11 @@ export default function DashboardBody() {
               {BADGES.map((b) => {
                 const got = s.badges.includes(b.id);
                 return (
-                  <div key={b.id} className={`rounded-2xl border p-4 ${got ? "border-amber/50 bg-amber/5" : "border-line opacity-60"}`}>
-                    <div className={`w-10 h-10 rounded-full grid place-items-center font-display text-sm font-bold ${got ? "bg-gradient-to-br from-amber to-rose text-[#1a0f00]" : "bg-line text-muted"}`}>{b.icon}</div>
+                  <motion.div key={b.id} whileHover={got ? { y: -4, rotateY: 12 } : undefined} style={{ transformPerspective: 600 }} className={`rounded-2xl border p-4 ${got ? "border-amber/50 bg-amber/5" : "border-line opacity-60"}`}>
+                    <motion.div initial={got ? { rotateY: 180, scale: 0.6 } : false} animate={got ? { rotateY: 0, scale: 1 } : undefined} transition={{ type: "spring", stiffness: 160, damping: 14 }} className={`w-10 h-10 rounded-full grid place-items-center font-display text-sm font-bold ${got ? "bg-gradient-to-br from-amber to-rose text-[#1a0f00] shadow-[0_0_18px_-4px_var(--amber)]" : "bg-line text-muted"}`}>{b.icon}</motion.div>
                     <div className="font-semibold mt-2 text-sm">{b.name}</div>
                     <div className="text-xs text-muted">{b.desc}</div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>

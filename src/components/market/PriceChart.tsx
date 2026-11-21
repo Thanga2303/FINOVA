@@ -43,6 +43,7 @@ function Candles({ pts, range }: { pts: ChartPt[]; range: string }) {
         {Array.from({ length: 5 }, (_, i) => lo + ((hi - lo) * i) / 4).map((t) => (
           <g key={t}><line x1={0} x2={w - AX} y1={y(t)} y2={y(t)} stroke="var(--line)" /><text x={w - AX + 6} y={y(t) + 4} fontSize={11} fill="var(--muted)">{t.toFixed(t > 1000 ? 0 : 2)}</text></g>
         ))}
+        <g className="candle-glow" style={{ color: "color-mix(in srgb, var(--cyan) 55%, transparent)" }}>
         {data.map((d, i) => {
           const up = d.c >= d.o!;
           const col = up ? "var(--emerald)" : "var(--rose)";
@@ -56,6 +57,7 @@ function Candles({ pts, range }: { pts: ChartPt[]; range: string }) {
             </g>
           );
         })}
+        </g>
       </svg>
     </div>
   );

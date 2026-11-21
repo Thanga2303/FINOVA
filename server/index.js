@@ -88,7 +88,7 @@ app.post("/api/chat", async (req, res) => {
 // ---- Static app ----
 const dist = path.join(root, "dist");
 if (fs.existsSync(dist)) {
-  app.use(express.static(dist, { maxAge: "1h", index: false }));
+  app.use(express.static(dist, { maxAge: 0, etag: true, index: false }));
   app.get(/^(?!\/api).*/, (_req, res) => res.sendFile(path.join(dist, "index.html")));
 }
 

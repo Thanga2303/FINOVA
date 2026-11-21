@@ -1,10 +1,15 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { academies, allLessons, lessonPath } from "../data";
 import type { Level } from "../data/types";
 import { useStore } from "../lib/store";
 import { Icon, LevelBadge, Page, Reveal, Ring, SectionHead } from "../components/ui";
 import DailyChallenge from "../components/DailyChallenge";
+import ConceptLab from "../components/ConceptLab";
+import { TiltCard } from "../components/fx";
+import { LEVELS as XP_LEVELS, levelFor } from "../lib/store";
+
+const LearningPath = lazy(() => import("../three/LearningPath"));
 
 const LEVELS: (Level | "All")[] = ["All", "Beginner", "Intermediate", "Advanced"];
 
@@ -17,6 +22,8 @@ export default function Learn() {
     [level, acad],
   );
   const done = Object.keys(completed).length;
+  const xp = useStore((s) => s.xp);
+  const { level: lvl, next } = levelFor(xp);
 
   return (
     <Page>
@@ -28,12 +35,16 @@ export default function Learn() {
               const n = a.lessons.filter((l) => completed[l.id]).length;
               return (
                 <Reveal key={a.id} delay={i * 0.05}>
-                  <Link to={`/learn/${a.id}`} className="glass rounded-3xl p-5 flex items-center gap-5 hover:border-cyan/50 transition-colors">
-                    <Ring pct={n / a.lessons.length} size={76} stroke={7} label={`${Math.round((n / a.lessons.length) * 100)}%`} />
-                    <div className="min-w-0">
-                      <div className="font-display text-lg font-semibold">{a.name}</div>
-                      <div className="text-sm text-muted">{n}/{a.lessons.length} lessons complete</div>
-                    </div>
+                  <Link to={`/learn/${a.id}`} className="block h-full">
+                    <TiltCard className="p-5">
+                      <div className="flex items-center gap-5">
+                        <Ring pct={n / a.lessons.length} size={76} stroke={7} label={`${Math.round((n / a.lessons.length) * 100)}%`} />
+                        <div className="min-w-0">
+                          <div className="font-display text-lg font-semibold">{a.name}</div>
+                          <div className="text-sm text-muted">{n}/{a.lessons.length} lessons complete</div>
+                        </div>
+                      </div>
+                    </TiltCard>
                   </Link>
                 </Reveal>
               );
@@ -49,6 +60,24 @@ export default function Learn() {
           <DailyChallenge />
         </div>
       </div>
+
+      <section className="mt-12 glass rounded-3xl p-5 sm:p-7 relative overflow-hidden">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold tracking-[0.2em] uppercase text-cyan mb-2">Your journey</div>
+            <h2 className="font-display text-2xl sm:text-3xl font-semibold">From Beginner to Finance Master</h2>
+          </div>
+          <div className="text-sm text-muted">You are <span className="text-emerald font-semibold">{lvl.name}</span> · {xp} XP{next ? ` · ${next.min - xp} XP to ${next.name}` : ""}</div>
+        </div>
+        <div className="h-[260px] sm:h-[320px] mt-2">
+          <Suspense fallback={<div className="h-full grid place-items-center text-sm text-muted">Loading your journey…</div>}>
+            <LearningPath levels={XP_LEVELS} xp={xp} />
+          </Suspense>
+        </div>
+        <p className="text-xs text-faint">Earn XP from lessons (+20), quiz answers (+10), tools and daily challenges to move along the path.</p>
+      </section>
+
+      <div className="mt-8"><ConceptLab /></div>
 
       <div className="mt-14 flex flex-wrap items-center gap-2">
         {LEVELS.map((lv) => (

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { calcText, detectCalc, isPlanningQuestion, planFor, planText, research, type CalcCard } from "../lib/aiTools";
@@ -8,6 +8,11 @@ import { getState, markTool, setState, useStore } from "../lib/store";
 import { walletContext } from "../lib/wallet";
 import Markdown from "../components/Markdown";
 import { Icon, inr, Page } from "../components/ui";
+import { OrbLite, type OrbState } from "../components/OrbLite";
+import { listen, speak, speechInputSupported, speechOutputSupported, stopSpeaking } from "../lib/voice";
+
+const AiOrb = lazy(() => import("../three/AiOrb"));
+const VKEY = "finova.voiceReplies";
 
 type Mode = "learning" | "research" | "planner";
 type Msg = { role: "user" | "assistant"; content: string; offline?: boolean; card?: CalcCard; mode?: Mode; source?: string };
@@ -70,6 +75,31 @@ export default function AiPage() {
   const [provider, setProvider] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [voiceErr, setVoiceErr] = useState<string | null>(null);
+  const [voiceReplies, setVoiceReplies] = useState(() => { try { return localStorage.getItem(VKEY) === "1"; } catch { return false; } });
+  const stopRef = useRef<() => void>(() => {});
+  const level = useRef(0);
+  const voiceRef = useRef(voiceReplies);
+  voiceRef.current = voiceReplies;
+  const orbState: OrbState = listening ? "listening" : speaking ? "speaking" : busy ? (mode === "research" ? "processing" : "thinking") : "idle";
+  useEffect(() => () => { stopSpeaking(); stopRef.current(); }, []);
+
+  function say(text: string) {
+    if (!voiceRef.current || !speechOutputSupported()) return;
+    speak(text, { onStart: () => setSpeaking(true), onEnd: () => setSpeaking(false), onPulse: () => { level.current = 1; } });
+  }
+  function toggleMic() {
+    if (listening) { stopRef.current(); return; }
+    stopSpeaking(); setSpeaking(false); setVoiceErr(null); setListening(true);
+    stopRef.current = listen({
+      onInterim: (t) => setInput(t),
+      onFinal: (t) => { if (!voiceRef.current) { setVoiceReplies(true); voiceRef.current = true; try { localStorage.setItem(VKEY, "1"); } catch { /* ignore */ } } send(t); },
+      onEnd: () => setListening(false),
+      onError: (m) => setVoiceErr(m),
+    });
+  }
 
   useEffect(() => { fetch("/api/health").then((r) => r.json()).then((j) => setProvider(j.ai)).catch(() => setProvider("offline")); }, []);
   useEffect(() => {
@@ -103,7 +133,7 @@ export default function AiPage() {
     setMsgs((m) => [...m, { role: "user", content: t, mode }]);
     setInput("");
     setBusy(true);
-    const push = (msg: Msg) => setMsgs((m) => [...m, { mode, ...msg }]);
+    const push = (msg: Msg) => { setMsgs((m) => [...m, { mode, ...msg }]); if (msg.role === "assistant") say(msg.content); };
     try {
       // 1) Exact calculators, in any mode.
       const calc = detectCalc(t);
@@ -148,10 +178,10 @@ export default function AiPage() {
           <header className="px-4 sm:px-5 py-4 border-b border-line">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl grid place-items-center bg-gradient-to-br from-cyan to-emerald text-[#04121c]"><Icon name="spark" className="w-5 h-5" /></div>
+                <OrbLite state={orbState} size={40} />
                 <div>
                   <h1 className="font-display text-lg font-semibold">FINOVA AI</h1>
-                  <div className="text-xs text-muted">{provider === null ? "Connecting…" : provider === "offline" ? "Offline mode: calculators, planner, research and lesson library" : "Online · education, not advice"}</div>
+                  <div className="text-xs text-muted"><span className="capitalize text-cyan">{orbState}</span> · {provider === null ? "Connecting…" : provider === "offline" ? "Offline mode: calculators, planner, research and lesson library" : "Online · education, not advice"}</div>
                 </div>
               </div>
               <button className="chip" onClick={() => setMsgs([WELCOME])}>New chat</button>
@@ -188,12 +218,32 @@ export default function AiPage() {
             </div>
             <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="flex gap-2 mt-1">
               <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={mode === "planner" ? "e.g. I earn ₹30,000 and spend ₹15,000. How should I plan?" : mode === "research" ? "e.g. Summarise TCS fundamentals" : "Ask about any financial concept…"} className="field" aria-label="Your question" maxLength={2000} />
+              {speechInputSupported() && (
+                <button type="button" onClick={toggleMic} aria-pressed={listening} aria-label={listening ? "Stop listening" : "Speak your question"} className={`btn-ghost !px-3 shrink-0 ${listening ? "!border-emerald !text-emerald" : ""}`}>
+                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
+                </button>
+              )}
               <button className="btn-primary !px-4 shrink-0 disabled:opacity-50" disabled={busy || !input.trim()} aria-label="Send"><Icon name="send" className="w-5 h-5" /></button>
             </form>
           </div>
         </section>
 
         <aside className="space-y-4">
+          <div className="glass rounded-3xl p-4 hidden lg:block">
+            <Suspense fallback={<div className="h-[220px] grid place-items-center"><OrbLite state={orbState} size={110} /></div>}>
+              <AiOrb state={orbState} level={level} size={220} />
+            </Suspense>
+            <div className="text-center text-sm"><span className="font-semibold capitalize text-cyan">{orbState}</span><span className="text-muted"> · {listening ? "speak now" : speaking ? "reading the answer aloud" : busy ? "working on it" : "ready"}</span></div>
+          </div>
+          <div className="glass rounded-3xl p-5 space-y-3">
+            <div className="font-semibold">Voice</div>
+            {speechInputSupported() ? <p className="text-xs text-muted">Tap the mic next to the message box and ask your question out loud (English, India). Your browser handles speech recognition.</p> : <p className="text-xs text-muted">Voice input needs Chrome or Edge.</p>}
+            {speechOutputSupported() && (
+              <label className="flex items-center justify-between text-sm"><span>Read answers aloud</span><input type="checkbox" className="accent-[var(--cyan)] w-4 h-4" checked={voiceReplies} onChange={(e) => { setVoiceReplies(e.target.checked); try { localStorage.setItem(VKEY, e.target.checked ? "1" : "0"); } catch { /* ignore */ } if (!e.target.checked) { stopSpeaking(); setSpeaking(false); } }} /></label>
+            )}
+            {speaking && <button className="chip" onClick={() => { stopSpeaking(); setSpeaking(false); }}>Stop speaking</button>}
+            {voiceErr && <p className="text-xs text-rose" role="alert">{voiceErr}</p>}
+          </div>
           <div className="glass rounded-3xl p-5">
             <div className="font-semibold mb-2">Your privacy choices</div>
             <label className="flex items-start gap-3 text-sm py-2">

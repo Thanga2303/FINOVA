@@ -11,8 +11,9 @@ import { cleanSym, fmtTime, useApi, type Overview } from "../lib/api";
 import { useStore } from "../lib/store";
 import { monthSummary, thisMonth } from "../lib/wallet";
 import { Change, DataBadge, level, price } from "../components/market/bits";
+import FloatingDashboard from "../components/FloatingDashboard";
 
-function HomeMarket() {
+export function HomeMarket() {
   const { data, error } = useApi<Overview>("/api/market/overview", { poll: 60e3, maxAge: 55e3 });
   const wallet = useStore((s) => s.wallet);
   const sum = monthSummary(wallet, thisMonth());
@@ -136,6 +137,8 @@ export function LiveStyleMarket() {
 export default function Home() {
   const exploreRef = useRef<HTMLDivElement>(null);
   const lessonCount = allLessons.length;
+  const { data: market } = useApi<Overview>("/api/market/overview", { poll: 60e3, maxAge: 55e3 });
+  const nifty = market?.indices.find((i) => i.symbol === "^NSEI");
 
   useEffect(() => {
     if (!exploreRef.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -159,73 +162,62 @@ export default function Home() {
   return (
     <Page>
       {/* HERO */}
-      <section className="relative grid lg:grid-cols-[1.05fr_1fr] gap-8 items-center min-h-[calc(100vh-6rem)] -mt-6">
+      <section className="relative grid lg:grid-cols-[1fr_1.1fr] gap-6 items-center min-h-[calc(100vh-5rem)] -mt-8">
         <div className="relative z-10">
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="chip !text-cyan mb-5">
-            <Icon name="spark" className="w-3.5 h-3.5" /> Your intelligent financial learning companion
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="chip !text-cyan mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald animate-pulse" /> Markets · Paper trading · AI tutor · Wallet
           </motion.div>
           <motion.h1
-            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="font-display text-[2.6rem] leading-[1.02] sm:text-6xl lg:text-7xl font-bold tracking-tight"
+            initial={{ opacity: 0, y: 30, filter: "blur(10px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+            className="font-display font-bold tracking-tight leading-[0.9] text-[4.2rem] sm:text-8xl lg:text-[8.5rem] text-gradient hero-wordmark"
           >
-            MASTER YOUR MONEY.<br /><span className="text-gradient">BUILD YOUR FUTURE.</span>
+            FINOVA
           </motion.h1>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35, duration: 0.8 }} className="mt-6 text-lg text-muted max-w-xl">
-            Learn stocks, mutual funds, trading, investments, and business strategies with FINOVA – your intelligent financial learning companion.
+          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.8 }} className="mt-4 font-display text-3xl sm:text-4xl font-semibold">
+            Where Investors Are Made.
           </motion.p>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="mt-8 flex flex-wrap gap-3">
-            <Link to="/learn" className="btn-primary inline-flex items-center gap-2">Start Learning <Icon name="arrow" className="w-4 h-4" /></Link>
-            <a href="#explore" className="btn-ghost">Explore Financial World</a>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45, duration: 0.8 }} className="mt-4 text-lg text-muted max-w-xl">
+            Learn the market. Practice trading. Build financial intelligence.
+          </motion.p>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="mt-8 flex flex-wrap gap-3">
+            <Link to="/stocks" className="btn-primary inline-flex items-center gap-2">Explore Markets <Icon name="arrow" className="w-4 h-4" /></Link>
+            <Link to="/investments" className="btn-ghost inline-flex items-center gap-2"><Icon name="candle" className="w-4 h-4 text-emerald" /> Start Paper Trading</Link>
+            <Link to="/ai" className="btn-ghost inline-flex items-center gap-2"><Icon name="spark" className="w-4 h-4 text-cyan" /> Meet FINOVA AI</Link>
           </motion.div>
-          <motion.dl initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="mt-10 grid grid-cols-3 gap-4 max-w-md">
-            {[[`${lessonCount}`, "lessons with quizzes"], ["4", "academies"], [`${businessIdeas.length}`, "business playbooks"]].map(([n, l]) => (
+          <motion.dl initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-10 grid grid-cols-3 gap-4 max-w-md">
+            {[[`${lessonCount}`, "lessons with quizzes"], ["14k+", "funds with real NAVs"], ["52", "NSE stocks tracked"]].map(([n, l]) => (
               <div key={l}><dt className="sr-only">{l}</dt><dd className="font-display text-3xl font-semibold">{n}</dd><div className="text-xs text-muted">{l}</div></div>
             ))}
           </motion.dl>
         </div>
-        <div className="relative h-[420px] sm:h-[520px] lg:h-[620px]">
-          <Suspense fallback={<div className="absolute inset-0 grid place-items-center"><div className="w-64 h-64 rounded-full bg-cyan/10 blur-2xl" /></div>}>
-            <HeroScene />
+        <div className="relative h-[440px] sm:h-[560px] lg:h-[680px] -mx-4 sm:mx-0">
+          <Suspense fallback={<div className="absolute inset-0 grid place-items-center"><div className="w-72 h-72 rounded-full bg-cyan/10 blur-2xl" /></div>}>
+            <HeroScene tickers={(market?.trending ?? []).map((t) => ({ symbol: cleanSym(t.symbol), changePct: t.changePct }))} />
           </Suspense>
-          <FloatingCard className="left-0 top-[12%] hidden sm:block" delay={0.8}>
+          {nifty && (
+            <FloatingCard className="left-2 sm:left-0 top-[8%]" delay={0.8}>
+              <div className="text-xs text-muted">NIFTY 50 · delayed</div>
+              <div className="font-display text-lg font-semibold tabular-nums">{level(nifty.price)}</div>
+              <Change pct={nifty.changePct} className="text-xs" />
+            </FloatingCard>
+          )}
+          {market && (
+            <FloatingCard className="right-2 sm:right-0 top-[60%]" delay={1.1}>
+              <div className="text-xs text-muted">Market breadth today</div>
+              <div className="font-display text-lg font-semibold"><span className="text-emerald">{market.breadth.advancers}↑</span> <span className="text-rose">{market.breadth.decliners}↓</span></div>
+              <div className="text-[10px] text-faint">of 52 tracked NSE stocks</div>
+            </FloatingCard>
+          )}
+          <FloatingCard className="left-[6%] bottom-[5%] hidden md:block" delay={1.4}>
             <div className="text-xs text-muted">SIP ₹5,000/mo · 15 yrs @ 12%*</div>
             <div className="font-display text-lg font-semibold text-emerald">≈ ₹25.2 L</div>
           </FloatingCard>
-          <FloatingCard className="right-0 top-[58%]" delay={1.1}>
-            <div className="text-xs text-muted">Rule of 72 at 9%</div>
-            <div className="font-display text-lg font-semibold text-cyan">Doubles in ~8 yrs</div>
-          </FloatingCard>
-          <FloatingCard className="left-[8%] bottom-[6%] hidden md:block" delay={1.4}>
-            <div className="text-xs text-muted">Level up</div>
-            <div className="font-display text-sm font-semibold">Beginner → Finance Master</div>
-          </FloatingCard>
-          <div className="absolute bottom-0 right-0 text-[10px] text-faint">*Hypothetical illustration, not a guaranteed return.</div>
+          <div className="absolute bottom-0 right-2 text-[10px] text-faint">Orbiting labels: today's biggest movers (delayed). *Hypothetical, not guaranteed.</div>
         </div>
       </section>
 
-      {/* MARKET VIZ + FACTS */}
-      <section className="grid lg:grid-cols-[1.3fr_1fr] gap-6 mt-8">
-        <Reveal><HomeMarket /></Reveal>
-        <Reveal delay={0.1}>
-          <div className="glass rounded-3xl p-6 h-full">
-            <div className="text-xs font-semibold tracking-[0.2em] uppercase text-cyan mb-4">Indian market facts</div>
-            <ul className="space-y-4">
-              {[
-                ["1875", "BSE founded, Asia's oldest stock exchange"],
-                ["1994", "NSE starts screen-based trading"],
-                ["T+1", "Settlement cycle for Indian equities"],
-                ["50 / 30", "Companies in the Nifty 50 / Sensex"],
-                ["6 levels", "SEBI riskometer, Low to Very High"],
-              ].map(([k, v]) => (
-                <li key={k} className="flex items-baseline gap-4">
-                  <span className="font-display text-2xl font-semibold text-gradient w-24 shrink-0">{k}</span>
-                  <span className="text-sm text-muted">{v}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Reveal>
-      </section>
+      {/* FLOATING DASHBOARD */}
+      <FloatingDashboard market={market} />
 
       {/* SCROLL INTRO TO CATEGORIES */}
       <section id="explore" ref={exploreRef} className="relative mt-28 scroll-mt-24 overflow-x-clip" style={{ perspective: 1200 }}>

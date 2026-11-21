@@ -1,4 +1,4 @@
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import Nav, { BottomNav } from "./components/Nav";
@@ -41,6 +41,12 @@ function Loading() {
   );
 }
 
+function ScrollProgress() {
+  const { scrollYProgress } = useScroll();
+  const x = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.3 });
+  return <motion.div aria-hidden className="fixed top-0 left-0 right-0 h-[2px] z-[60] origin-left bg-gradient-to-r from-cyan via-emerald to-violet" style={{ scaleX: x }} />;
+}
+
 export default function App() {
   const loc = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -63,6 +69,7 @@ export default function App() {
   return (
     <>
       <div className="aurora" aria-hidden />
+      <ScrollProgress />
       <a href="#content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[70] btn-primary">Skip to content</a>
       <Nav onSearch={() => setSearchOpen(true)} />
       <Search open={searchOpen} onClose={() => setSearchOpen(false)} />

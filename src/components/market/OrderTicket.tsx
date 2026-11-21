@@ -142,8 +142,18 @@ export default function OrderTicket({ open, onClose, kind, symbol, name, ltp, ca
 
             {step === "done" && result && (
               <div className="mt-6 text-center">
-                <div className={`mx-auto w-14 h-14 rounded-full grid place-items-center ${result.ok ? "bg-emerald/15 text-emerald" : "bg-rose/15 text-rose"}`}>
-                  <Icon name={result.ok ? "check" : "close"} className="w-7 h-7" />
+                <div className="relative mx-auto w-14 h-14">
+                  {result.ok && [0, 0.25].map((d) => <span key={d} aria-hidden className="absolute inset-0 rounded-full border-2 border-emerald ring-pop" style={{ animationDelay: `${d}s` }} />)}
+                  {result.ok && Array.from({ length: 10 }, (_, i) => (
+                    <motion.span key={i} aria-hidden className="absolute left-1/2 top-1/2 w-1.5 h-1.5 rounded-full bg-emerald"
+                      initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                      animate={{ x: Math.cos((i / 10) * Math.PI * 2) * 46, y: Math.sin((i / 10) * Math.PI * 2) * 46, opacity: 0, scale: 0.3 }}
+                      transition={{ duration: 0.9, ease: "easeOut" }} />
+                  ))}
+                  <motion.div initial={{ scale: 0.4, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 300, damping: 14 }}
+                    className={`relative w-14 h-14 rounded-full grid place-items-center ${result.ok ? "bg-emerald/15 text-emerald shadow-[0_0_30px_-4px_var(--emerald)]" : "bg-rose/15 text-rose"}`}>
+                    <Icon name={result.ok ? "check" : "close"} className="w-7 h-7" />
+                  </motion.div>
                 </div>
                 <h3 className="font-display text-xl font-semibold mt-3">{result.ok ? "Paper order placed" : "Order not placed"}</h3>
                 <p className="text-sm text-muted mt-2">{result.message}</p>

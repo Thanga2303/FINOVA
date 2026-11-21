@@ -1,8 +1,10 @@
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Html, OrbitControls } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
+import Label from "./Label";
 import { useRef } from "react";
 import * as THREE from "three";
-import { inrShort, lowPower } from "../components/ui";
+import { inrShort } from "../components/ui";
+import Stage from "./Stage";
 
 export type WealthPoint = { year: number; invested: number; value: number };
 
@@ -39,11 +41,11 @@ function Bars({ data }: { data: WealthPoint[] }) {
           <Bar x={-0.18} h={(d.invested / max) * H} color="#00D4FF" delay={i * 0.05} />
           <Bar x={0.18} h={(d.value / max) * H} color="#00E6A0" delay={i * 0.05 + 0.1} />
           {label.has(i) && (
-            <Html position={[0, (d.value / max) * H + 0.35, 0]} center distanceFactor={8} zIndexRange={[10, 0]}>
+            <Label position={[0, (d.value / max) * H + 0.35, 0]} center distanceFactor={8} zIndexRange={[10, 0]}>
               <div className="whitespace-nowrap text-[11px] font-semibold text-emerald bg-bg2/80 border border-line rounded-md px-1.5 py-0.5">
                 Yr {d.year}: {inrShort(d.value)}
               </div>
-            </Html>
+            </Label>
           )}
         </group>
       ))}
@@ -56,15 +58,19 @@ function Bars({ data }: { data: WealthPoint[] }) {
 }
 
 export default function WealthBars({ data }: { data: WealthPoint[] }) {
-  const low = lowPower();
   const z = Math.max(9, (data.length - 1) * 0.9 * 1.15 + 4);
   return (
-    <Canvas dpr={low ? [1, 1.25] : [1, 2]} camera={{ position: [0, 1.4, z], fov: 45 }} gl={{ alpha: true, antialias: !low }}>
-      <ambientLight intensity={0.7} />
-      <directionalLight position={[3, 6, 5]} intensity={2.2} />
-      <pointLight position={[-5, 2, 3]} intensity={20} color="#8B5CF6" />
-      <Bars key={data.map((d) => Math.round(d.value)).join(",")} data={data} />
-      <OrbitControls enableZoom={false} enablePan={false} autoRotate={!low} autoRotateSpeed={0.6} minPolarAngle={Math.PI / 3} maxPolarAngle={Math.PI / 2} />
-    </Canvas>
+    <Stage className="w-full h-full" label="3D bar chart of invested amount versus estimated value by year" camera={{ position: [0, 1.4, z], fov: 45 }} interactive
+      fallback={<div className="h-full grid place-items-center text-sm text-muted">Estimated value: {inrShort(data.at(-1)?.value ?? 0)}</div>}>
+      {(q) => (
+        <>
+          <ambientLight intensity={0.7} />
+          <directionalLight position={[3, 6, 5]} intensity={2.2} />
+          <pointLight position={[-5, 2, 3]} intensity={20} color="#8B5CF6" />
+          <Bars key={data.map((d) => Math.round(d.value)).join(",")} data={data} />
+          <OrbitControls enableZoom={false} enablePan={false} autoRotate={q === "high"} autoRotateSpeed={0.6} minPolarAngle={Math.PI / 3} maxPolarAngle={Math.PI / 2} />
+        </>
+      )}
+    </Stage>
   );
 }
