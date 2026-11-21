@@ -12,6 +12,7 @@ import { useStore } from "../lib/store";
 import { monthSummary, thisMonth } from "../lib/wallet";
 import { Change, DataBadge, level, price } from "../components/market/bits";
 import FloatingDashboard from "../components/FloatingDashboard";
+import MissionPillars, { TrustStrip } from "../components/MissionPillars";
 
 export function HomeMarket() {
   const { data, error } = useApi<Overview>("/api/market/overview", { poll: 60e3, maxAge: 55e3 });
@@ -165,7 +166,7 @@ export default function Home() {
       <section className="relative grid lg:grid-cols-[1fr_1.1fr] gap-6 items-center min-h-[calc(100vh-5rem)] -mt-8">
         <div className="relative z-10">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="chip !text-cyan mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald animate-pulse" /> Markets · Paper trading · AI tutor · Wallet
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald animate-pulse" /> Learn. Practice. Analyse. Master the Market.
           </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 30, filter: "blur(10px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
@@ -216,8 +217,12 @@ export default function Home() {
         </div>
       </section>
 
+      <TrustStrip />
+
       {/* FLOATING DASHBOARD */}
       <FloatingDashboard market={market} />
+
+      <MissionPillars market={market} />
 
       {/* SCROLL INTRO TO CATEGORIES */}
       <section id="explore" ref={exploreRef} className="relative mt-28 scroll-mt-24 overflow-x-clip" style={{ perspective: 1200 }}>

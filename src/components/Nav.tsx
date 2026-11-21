@@ -56,11 +56,14 @@ export function BottomNav() {
   );
 }
 
-export function Logo() {
+export function Logo({ tagline = false }: { tagline?: boolean }) {
   return (
-    <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="FINOVA home">
-      <img src="/favicon.svg" alt="" className="w-8 h-8" />
-      <span className="font-display text-lg font-bold tracking-wide">FIN<span className="text-gradient">OVA</span></span>
+    <Link to="/" className="flex items-center gap-2.5 shrink-0 group" aria-label="FINOVA home">
+      <img src="/favicon.svg" alt="" className="w-8 h-8 transition-transform duration-500 group-hover:rotate-[-8deg]" />
+      <span className="leading-none">
+        <span className="font-display text-[17px] font-semibold tracking-[0.2em]">FIN<span className="text-gradient">OVA</span></span>
+        {tagline && <span className="block mt-1 text-[10px] tracking-[0.18em] uppercase text-muted">Where Investors Are Made.</span>}
+      </span>
     </Link>
   );
 }

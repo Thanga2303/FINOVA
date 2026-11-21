@@ -8,7 +8,7 @@
   --line: rgba(255, 255, 255, 0.09);
   --text: #f4f7fb;
   --muted: #9aa6b8;
-  --faint: #64708a;
+  --faint: #7f8ba5;
   --cyan: #00d4ff;
   --emerald: #00e6a0;
   --violet: #8b5cf6;
@@ -26,7 +26,7 @@
   --line: rgba(15, 23, 42, 0.1);
   --text: #0b1324;
   --muted: #4b5870;
-  --faint: #7a869c;
+  --faint: #5c687e;
   --cyan: #0091c2;
   --emerald: #00a874;
   --violet: #7044e0;
@@ -50,7 +50,7 @@
   --color-amber: var(--amber);
   --color-rose: var(--rose);
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", "Inter", ui-sans-serif, sans-serif;
+  --font-display: "Sora", "Inter", ui-sans-serif, sans-serif;
 }
 
 html {
@@ -63,6 +63,8 @@ body {
 }
 
 body {
+  font-feature-settings: "ss01", "cv11";
+  text-rendering: optimizeLegibility;
   margin: 0;
   background: var(--bg);
   color: var(--text);

@@ -1,1 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00D4FF"/><stop offset="1" stop-color="#00E6A0"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="#080D19"/><path d="M18 46V18h28v7H26v6h16v7H26v8z" fill="url(#g)"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FINOVA">
+  <defs>
+    <linearGradient id="fg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00D4FF"/>
+      <stop offset="1" stop-color="#00E6A0"/>
+    </linearGradient>
+    <radialGradient id="bg" cx="0.3" cy="0.2" r="0.9">
+      <stop offset="0" stop-color="#13213D"/>
+      <stop offset="1" stop-color="#080D19"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="15.25" fill="none" stroke="#00D4FF" stroke-opacity="0.28" stroke-width="1.5"/>
+  <ellipse cx="32" cy="33" rx="24" ry="9.5" fill="none" stroke="url(#fg)" stroke-opacity="0.55" stroke-width="1.6" transform="rotate(-24 32 33)"/>
+  <path d="M21 47V17h22v6.5H28.4v6H40v6.4H28.4V47z" fill="url(#fg)"/>
+  <circle cx="49.5" cy="20.5" r="3.2" fill="#00E6A0"/>
+</svg>
