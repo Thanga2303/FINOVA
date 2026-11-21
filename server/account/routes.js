@@ -7,6 +7,7 @@ import { PAID, planById, publicPlans } from "./plans.js";
 import { googlePlay, providerStatus, razorpay, testMode } from "./providers.js";
 import { activate, aiUsage, consumeAi, effectivePlan, getSub, logEvent, runLifecycle, scheduleDowngrade, setCancel, setStatus } from "./subscriptions.js";
 import { MASTERCLASSES } from "../data/masterclasses.js";
+import { recordClientEvents, report } from "./metrics.js";
 
 const h = (fn) => async (req, res) => {
   try {
@@ -87,23 +88,52 @@ export function mountWebhooks(app) {
     return { ok: true };
   }));
 
-  // Google Play Real-time Developer Notifications (Pub/Sub push). The message is only a hint:
-  // the purchase token is always re-verified with Google before anything changes.
+  // Google Play Real-time Developer Notifications (Pub/Sub push). Protected by a shared secret in the push URL;
+  // the message is only a hint and the token is always re-verified with Google before anything changes.
+  const digest = (v) => crypto.createHash("sha256").update(String(v)).digest();
   app.post("/api/billing/webhook/google-play", express.json({ limit: "64kb" }), h(async (req) => {
     if (!googlePlay.configured()) throw httpError(503, "Google Play Billing is not configured.");
-    const data = req.body?.message?.data ? JSON.parse(Buffer.from(req.body.message.data, "base64").toString("utf8")) : null;
-    const token = data?.subscriptionNotification?.purchaseToken;
-    if (!token) return { ok: true };
-    await applyPlayPurchase(token, null);
+    const secret = process.env.PLAY_RTDN_SECRET?.trim();
+    if (!secret || !crypto.timingSafeEqual(digest(req.query.secret ?? ""), digest(secret))) throw httpError(401, "Unauthorized");
+    const msg = req.body?.message;
+    const msgId = String(msg?.messageId ?? "").slice(0, 100);
+    if (msgId && read().webhookIds[`play:${msgId}`]) return { ok: true, duplicate: true };
+    let data = null;
+    try { data = msg?.data ? JSON.parse(Buffer.from(msg.data, "base64").toString("utf8")) : null; } catch { throw httpError(400, "Bad message"); }
+    if (data?.packageName && data.packageName !== process.env.GOOGLE_PLAY_PACKAGE_NAME) throw httpError(400, "Wrong package");
+    const TYPES = { 1: "SUBSCRIPTION_RECOVERED", 2: "SUBSCRIPTION_RENEWED", 3: "SUBSCRIPTION_CANCELED", 4: "SUBSCRIPTION_PURCHASED", 5: "SUBSCRIPTION_ON_HOLD", 6: "SUBSCRIPTION_IN_GRACE_PERIOD", 7: "SUBSCRIPTION_RESTARTED", 10: "SUBSCRIPTION_PAUSED", 12: "SUBSCRIPTION_REVOKED", 13: "SUBSCRIPTION_EXPIRED" };
+    const sn = data?.subscriptionNotification;
+    if (sn?.purchaseToken) {
+      await applyPlayPurchase(sn.purchaseToken, null, { notificationType: TYPES[sn.notificationType] ?? "OTHER" }).catch((e) => console.error("[play rtdn]", e.message));
+    }
+    const voided = data?.voidedPurchaseNotification;
+    if (voided?.purchaseToken) {
+      const bound = read().playTokens?.[tokenKey(voided.purchaseToken)];
+      if (bound) await setStatus(bound.userId, "canceled", { reason: "refunded_or_voided", endedAt: Date.now() });
+    }
+    if (msgId) await write((d) => { d.webhookIds[`play:${msgId}`] = Date.now(); });
     return { ok: true };
   }));
-
 }
 
 export function mountAccount(app) {
   app.use(sessionMiddleware);
   app.use("/api/auth", sameOrigin);
   app.use("/api/billing", sameOrigin);
+
+  // ---------- Analytics ----------
+  app.post("/api/metrics/events", sameOrigin, h(async (req) => {
+    if (!rateLimit(`metrics:${ip(req)}`, 60, 60e3)) return { ok: true, dropped: true };
+    await recordClientEvents(req.body?.events);
+    return { ok: true };
+  }));
+  // Revenue & conversion report: only for accounts listed in ADMIN_EMAILS (server env).
+  app.get("/api/admin/metrics", requireUser, h(async (req) => {
+    const admins = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+    if (!admins.includes(String(req.user.email).toLowerCase())) throw httpError(403, "Admins only.");
+    const days = Math.min(365, Math.max(1, Number(req.query.days) || 30));
+    return report(days);
+  }));
 
   // ---------- Auth ----------
   app.post("/api/auth/register", h(async (req, res) => {
@@ -138,6 +168,7 @@ export function mountAccount(app) {
     const plan = String(req.body?.plan ?? "");
     const provider = String(req.body?.provider ?? "razorpay");
     if (!PAID.includes(plan)) throw httpError(400, "Choose a paid plan.");
+    if (req.headers["x-finova-client"] === "android" && provider !== "google_play") throw httpError(400, "In the Android app, memberships are purchased through Google Play.");
     const current = effectivePlan(req.user.id);
     if (current.id === plan) throw httpError(400, `You're already on ${current.name}.`);
     if (planById(plan).tier < current.tier) throw httpError(400, "To move to a lower plan, use “Change plan” in your billing dashboard; it takes effect at renewal.");
@@ -184,7 +215,7 @@ export function mountAccount(app) {
 
   // Test mode: activates without any payment. Only available when BILLING_TEST_MODE=true on the server.
   app.post("/api/billing/verify/test", requireUser, h(async (req) => {
-    if (!testMode()) throw httpError(403, "Test checkout is disabled.");
+    if (!testMode() || req.headers["x-finova-client"] === "android") throw httpError(403, "Test checkout is disabled.");
     const chk = read().checkouts[req.body?.checkoutId];
     if (!chk || chk.userId !== req.user.id || chk.provider !== "test") throw httpError(400, "This checkout doesn't match your account.");
     await activate(req.user.id, { plan: chk.plan, provider: "test", providerRef: chk.id, amount: planById(chk.plan).priceMonthly, test: true });
@@ -200,6 +231,26 @@ export function mountAccount(app) {
     await applyPlayPurchase(token, req.user.id);
     return statusFor(req);
   }));
+
+  // Restore: the app sends every subscription token Google Play reports for this device's Google account.
+  app.post("/api/billing/restore/google-play", requireUser, h(async (req) => {
+    if (!googlePlay.configured()) throw httpError(503, "Google Play Billing is not configured.");
+    if (!rateLimit(`restore:${req.user.id}`, 10, 15 * 60e3)) throw httpError(429, "Too many restore attempts. Please wait a few minutes.");
+    const tokens = (Array.isArray(req.body?.purchaseTokens) ? req.body.purchaseTokens : []).map(String).filter((t) => t && t.length <= 4096).slice(0, 10);
+    const results = [];
+    for (const t of tokens) {
+      try { const r = await applyPlayPurchase(t, req.user.id); results.push({ ok: true, plan: r.plan, state: r.state }); } catch (e) { results.push({ ok: false, error: e.status && e.status < 500 ? e.message : "Could not verify this purchase." }); }
+    }
+    await logEvent(req.user.id, "restore_attempted", { provider: "google_play", count: tokens.length, restored: results.filter((r) => r.ok).length });
+    return { results, ...statusFor(req) };
+  }));
+
+  // Android app configuration: product ids and the account tag the app must attach to purchases.
+  app.get("/api/billing/play/config", requireUser, h(async (req) => ({
+    configured: googlePlay.configured(),
+    products: { pro: googlePlay.productFor("pro") || null, elite: googlePlay.productFor("elite") || null },
+    accountTag: googlePlay.accountTag(req.user.id),
+  })));
 
   // ---------- Manage ----------
   app.post("/api/billing/change", requireUser, h(async (req) => {
@@ -264,23 +315,57 @@ export function mountAccount(app) {
   setInterval(() => runLifecycle().catch((e) => console.error("[billing] lifecycle:", e.message)), 10 * 60e3).unref();
 }
 
-async function applyPlayPurchase(token, expectedUserId) {
+const tokenKey = (t) => crypto.createHash("sha256").update(String(t)).digest("hex");
+
+/**
+ * Verifies a Google Play subscription token WITH GOOGLE and applies the result.
+ * Binding: the purchase must carry this account's obfuscated id (set by the app at purchase time). For older
+ * purchases without one (restore), the token is bound to the first FINOVA account that proves it, and can never
+ * be claimed by a different account afterwards.
+ */
+async function applyPlayPurchase(token, expectedUserId, { notificationType = null } = {}) {
   const p = await googlePlay.verify(token);
   const item = p.lineItems?.[0];
   const plan = googlePlay.planFromProduct(item?.productId);
   if (!plan) throw httpError(400, "Unknown Google Play product.");
-  const tag = p.externalAccountIdentifiers?.obfuscatedExternalAccountId;
-  const userId = expectedUserId ?? Object.values(read().users).find((u) => googlePlay.accountTag(u.id) === tag)?.id;
-  if (!userId || googlePlay.accountTag(userId) !== tag) throw httpError(403, "This purchase belongs to a different FINOVA account.");
+  const tag = p.externalAccountIdentifiers?.obfuscatedExternalAccountId ?? null;
+  const key = tokenKey(token);
+  const boundTo = read().playTokens?.[key]?.userId ?? null;
+  let userId = expectedUserId ?? null;
+  if (!userId) userId = boundTo ?? (tag ? Object.values(read().users).find((u) => googlePlay.accountTag(u.id) === tag)?.id : null);
+  if (!userId) return { ignored: true }; // notification for a purchase no FINOVA account has claimed yet
+  if (tag && googlePlay.accountTag(userId) !== tag) throw httpError(403, "This purchase belongs to a different FINOVA account.");
+  if (!tag && boundTo && boundTo !== userId) throw httpError(403, "This purchase is already linked to a different FINOVA account.");
+  if (!boundTo) await write((d) => { d.playTokens = d.playTokens ?? {}; d.playTokens[key] = { userId, productId: item.productId, linkedAt: Date.now() }; });
+  // A replacement (upgrade/downgrade) supersedes the old token.
+  if (p.linkedPurchaseToken) await write((d) => { d.playTokens = d.playTokens ?? {}; const k = tokenKey(p.linkedPurchaseToken); if (d.playTokens[k]) d.playTokens[k].supersededBy = key; });
+
   const state = p.subscriptionState;
+  const expiry = Date.parse(item.expiryTime);
+  const isTest = Boolean(p.testPurchase); // Google Play license-tester purchase (real Play flow, not simulated by FINOVA)
+  const price = item.autoRenewingPlan?.recurringPrice;
+  const amountPaise = price && price.currencyCode === "INR" ? Math.round((Number(price.units ?? 0) + Number(price.nanos ?? 0) / 1e9) * 100) : null;
+  const chargeEvent = ["SUBSCRIPTION_PURCHASED", "SUBSCRIPTION_RENEWED", "SUBSCRIPTION_RECOVERED", null].includes(notificationType);
+  const prev = getSub(userId);
+  const ref = key.slice(0, 40);
+  const alreadyCurrent = prev?.provider === "google_play" && prev.providerRef === ref && prev.currentPeriodEnd === expiry && prev.status === "active";
+
   if (["SUBSCRIPTION_STATE_ACTIVE", "SUBSCRIPTION_STATE_IN_GRACE_PERIOD"].includes(state)) {
-    await activate(userId, { plan, provider: "google_play", providerRef: token.slice(0, 40), periodEnd: Date.parse(item.expiryTime), amount: null, status: state.endsWith("GRACE_PERIOD") ? "past_due" : "active" });
+    if (!alreadyCurrent) {
+      await activate(userId, { plan, provider: "google_play", providerRef: ref, periodEnd: expiry, amount: chargeEvent ? amountPaise ?? planById(plan).priceMonthly : null, test: isTest, status: state.endsWith("GRACE_PERIOD") ? "past_due" : "active" });
+    }
     if (p.acknowledgementState !== "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED") await googlePlay.acknowledge(item.productId, token);
-  } else if (["SUBSCRIPTION_STATE_CANCELED"].includes(state)) {
-    await setStatus(userId, "active", { cancelAtPeriodEnd: true, currentPeriodEnd: Date.parse(item.expiryTime) });
+  } else if (state === "SUBSCRIPTION_STATE_CANCELED") {
+    // Auto-renew turned off: access continues until expiry.
+    if (!prev || prev.plan !== plan || prev.provider !== "google_play") await activate(userId, { plan, provider: "google_play", providerRef: ref, periodEnd: expiry, amount: null, test: isTest });
+    await write((d) => { d.subscriptions[userId] = { ...d.subscriptions[userId], cancelAtPeriodEnd: true, scheduledPlan: "free", currentPeriodEnd: expiry, updatedAt: Date.now() }; });
+    await logEvent(userId, "cancel_scheduled", { plan, provider: "google_play" });
+  } else if (state === "SUBSCRIPTION_STATE_ON_HOLD" || state === "SUBSCRIPTION_STATE_PAUSED") {
+    await setStatus(userId, "past_due", { reason: state, onHold: true }); // payment failed after grace, or paused: no access until Google recovers it
   } else {
-    await setStatus(userId, state === "SUBSCRIPTION_STATE_ON_HOLD" ? "past_due" : "canceled", { reason: state });
+    await setStatus(userId, "expired", { reason: state, endedAt: Date.now() });
   }
+  return { userId, plan, state };
 }
 
 // ---------- analytics helpers (validated inputs) ----------

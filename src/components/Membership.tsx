@@ -2,10 +2,14 @@ import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { planLabel, useAccount, type Features } from "../lib/account";
 import { Icon } from "./ui";
+import { useEffect } from "react";
+import { isAndroidApp } from "../lib/native/platform";
+import { track } from "../lib/metrics";
 
 /** Upgrade prompt shown in place of a locked feature. */
 export function Locked({ plan, title, text, compact }: { plan: "pro" | "elite"; title: string; text?: string; compact?: boolean }) {
   const loc = useLocation();
+  useEffect(() => { track("paywall_view", { feature: title.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 32) }); }, [title]);
   return (
     <div className={`rounded-3xl border border-cyan/25 bg-gradient-to-br from-cyan/5 via-transparent to-violet/10 ${compact ? "p-4" : "p-6 sm:p-8"} text-center`}>
       <div className="mx-auto w-11 h-11 rounded-2xl grid place-items-center bg-bg2 border border-cyan/30 text-cyan"><Icon name="shield" className="w-5 h-5" /></div>
@@ -44,7 +48,8 @@ const PROMOS = [
 ];
 export function AdSlot({ index = 0, className = "" }: { index?: number; className?: string }) {
   const { features, loaded } = useAccount();
-  if (!loaded || features.adFree) return null;
+  // House promotions on the website only; the Android app uses AdMob placements instead (src/lib/ads).
+  if (!loaded || features.adFree || isAndroidApp) return null;
   const p = PROMOS[index % PROMOS.length];
   return (
     <aside className={`rounded-2xl border border-line bg-card px-4 py-3 flex flex-wrap items-center gap-3 ${className}`} aria-label="Promotion">

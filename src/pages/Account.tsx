@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { account, planLabel, rupees, useAccount, type PlanId } from "../lib/account";
 import { Icon, Page, Ring } from "../components/ui";
+import { isAndroidApp } from "../lib/native/platform";
+import { managePlaySubscriptions, restorePlayPurchases } from "../lib/native/playBilling";
 
 const EVENT_LABEL: Record<string, string> = {
   account_created: "Account created", checkout_started: "Checkout started", subscribed: "Subscribed", renewed: "Renewed", upgraded: "Upgraded", changed: "Plan changed",
@@ -58,7 +60,7 @@ function Billing() {
 
   const act = async (fn: () => Promise<unknown>, ok: string) => {
     setBusy(true); setMsg(null);
-    try { await fn(); setMsg(ok); } catch (e) { setMsg((e as Error).message); } finally { setBusy(false); }
+    try { await fn(); if (ok) setMsg(ok); } catch (e) { setMsg((e as Error).message); } finally { setBusy(false); }
   };
   const change = (to: PlanId) => act(async () => {
     const r = await account.change(to);
@@ -93,13 +95,25 @@ function Billing() {
             </div>
             <Link to="/pricing" className="btn-primary !py-2 text-sm">{plan.id === "free" ? "Upgrade" : "Compare plans"}</Link>
           </div>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {plan.id === "free" && <><button className="btn-ghost !py-2 text-sm" onClick={() => nav("/checkout?plan=pro")}>Upgrade to Pro · ₹149/mo</button><button className="btn-ghost !py-2 text-sm" onClick={() => nav("/checkout?plan=elite")}>Upgrade to Elite · ₹299/mo</button></>}
+          {sub?.provider === "google_play" ? (
+            <div className="mt-6 flex flex-wrap gap-2">
+              {/* Google Play owns this subscription: cancel, downgrade and payment changes happen in Google Play. */}
+              {isAndroidApp && plan.id === "pro" && <button className="btn-ghost !py-2 text-sm" onClick={() => nav("/checkout?plan=elite")}>Upgrade to Elite</button>}
+              {isAndroidApp ? <button className="btn-ghost !py-2 text-sm" onClick={() => managePlaySubscriptions()}>Manage on Google Play</button>
+                : <p className="text-sm text-muted">This membership was bought on Google Play. Open the FINOVA Android app or Google Play → Payments &amp; subscriptions to change or cancel it.</p>}
+            </div>
+          ) : (
+            <div className="mt-6 flex flex-wrap gap-2">
+            {plan.id === "free" && <><button className="btn-ghost !py-2 text-sm" onClick={() => nav("/checkout?plan=pro")}>Upgrade to Pro{isAndroidApp ? "" : " · ₹149/mo"}</button><button className="btn-ghost !py-2 text-sm" onClick={() => nav("/checkout?plan=elite")}>Upgrade to Elite{isAndroidApp ? "" : " · ₹299/mo"}</button></>}
             {plan.id === "pro" && <button className="btn-ghost !py-2 text-sm" disabled={busy} onClick={() => change("elite")}>Upgrade to Elite</button>}
             {plan.id === "elite" && <button className="btn-ghost !py-2 text-sm" disabled={busy} onClick={() => change("pro")}>Downgrade to Pro at renewal</button>}
             {sub && !sub.cancelAtPeriodEnd && plan.id !== "free" && <button className="btn-ghost !py-2 text-sm hover:!text-rose" disabled={busy} onClick={() => confirm(`Cancel ${plan.name}? You keep access until ${fmt(sub.currentPeriodEnd)}.`) && act(() => account.cancel(), "Cancelled. You keep access until the end of this period.")}>Cancel membership</button>}
             {sub?.cancelAtPeriodEnd && plan.id !== "free" && sub.provider !== "razorpay" && <button className="btn-ghost !py-2 text-sm" disabled={busy} onClick={() => act(() => account.resume(), "Your membership will renew as normal.")}>Keep my membership</button>}
           </div>
+          )}
+          {isAndroidApp && (
+            <div className="mt-3"><button className="text-sm text-cyan hover:underline disabled:opacity-50" disabled={busy} onClick={() => act(async () => { const r = await restorePlayPurchases(); setMsg(r.message); }, "")}>Restore Google Play purchases</button></div>
+          )}
           {msg && <p className="text-sm text-cyan mt-3" role="status">{msg}</p>}
         </div>
         <div className="glass rounded-3xl p-6">

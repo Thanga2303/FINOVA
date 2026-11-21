@@ -1,10 +1,12 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { suppressAds } from "../lib/ads/manager";
 import type { QuizQ } from "../data/types";
 import { recordQuiz, useStore } from "../lib/store";
 import { Icon } from "./ui";
 
 export default function Quiz({ id, questions, onDone }: { id: string; questions: QuizQ[]; onDone?: (score: number) => void }) {
+  useEffect(() => suppressAds("quiz"), []); // never interrupt a quiz
   const [picked, setPicked] = useState<(number | null)[]>(questions.map(() => null));
   const [submitted, setSubmitted] = useState(false);
   const best = useStore((s) => s.quiz[id]);

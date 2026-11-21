@@ -89,6 +89,8 @@ Plans are defined once in `server/account/plans.js`.
 
 Account data is stored by the server in `data/finova-db.json` (git-ignored). `supabase/schema.sql` includes matching `subscriptions`, `billing_events`, `invoices` and `ai_usage` tables (read-own RLS, server-only writes) for moving to Supabase.
 
+**Android app (Google Play Billing + AdMob):** a Capacitor shell in `android/` loads the FINOVA site. Memberships are bought with Google Play Billing and verified by the server (account-bound tokens, restore, renewals/cancellations/refunds via RTDN). AdMob ads respect UMP consent, never appear during paper orders, lessons, quizzes or checkout, and are removed for Pro/Elite. Revenue and conversion analytics are at `/admin/metrics`. Nothing is live until the Play Console and AdMob setup in [docs/ANDROID_MONETIZATION.md](docs/ANDROID_MONETIZATION.md) is done.
+
 **Going live:** create ₹149 and ₹299 monthly Plans in Razorpay, set `RAZORPAY_*` keys and the webhook secret (webhook URL `/api/billing/webhook/razorpay`), test end to end with Razorpay test keys, then switch to live keys and set `BILLING_TEST_MODE=false`. For international customers, a merchant-of-record provider (e.g. Paddle) can be added as another provider later.
 
 ## Trust and safety

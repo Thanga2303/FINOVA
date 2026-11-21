@@ -19,7 +19,7 @@ export function effectivePlan(userId) {
     if (s.currentPeriodEnd > now) return planById(s.plan);
     if (s.currentPeriodEnd + GRACE_DAYS * 864e5 > now && !s.cancelAtPeriodEnd) return planById(s.plan); // late renewal grace
   }
-  if (s.status === "past_due" && s.currentPeriodEnd + GRACE_DAYS * 864e5 > now) return planById(s.plan);
+  if (s.status === "past_due" && !s.onHold && s.currentPeriodEnd + GRACE_DAYS * 864e5 > now) return planById(s.plan); // on hold (Google Play account hold / pause) = no access
   return PLANS.free;
 }
 

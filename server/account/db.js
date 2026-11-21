@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "data");
 const FILE = path.join(DIR, "finova-db.json");
 
-const empty = () => ({ users: {}, emails: {}, sessions: {}, subscriptions: {}, events: [], invoices: [], usage: {}, checkouts: {}, webhookIds: {} });
+const empty = () => ({ users: {}, emails: {}, sessions: {}, subscriptions: {}, events: [], invoices: [], usage: {}, checkouts: {}, webhookIds: {}, playTokens: {}, metrics: {} });
 
 let db = empty();
 try {

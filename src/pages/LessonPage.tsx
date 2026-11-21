@@ -1,4 +1,6 @@
+import { useEffect, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
+import { naturalBreak, suppressAds } from "../lib/ads/manager";
 import { academyById, lessonById, lessonPath, nextLesson, prevLesson } from "../data";
 import { completeLesson, useStore } from "../lib/store";
 import { Disclaimer, Icon, LevelBadge, Page, Reveal } from "../components/ui";
@@ -15,6 +17,16 @@ export default function LessonPage() {
   const a = academyById(academy);
   const done = useStore((s) => Boolean(lesson && s.completed[lesson.id]));
   const { features, loaded } = useAccount();
+  // No ads while learning. If the learner finishes this lesson, leaving it is a natural break
+  // (the ad manager still applies consent, ad-free, route and frequency rules).
+  const startedDone = useRef(done);
+  const finishedHere = useRef(false);
+  useEffect(() => { if (done && !startedDone.current) finishedHere.current = true; }, [done]);
+  useEffect(() => {
+    const off = suppressAds("lesson");
+    return () => { off(); if (finishedHere.current) naturalBreak("lesson_completed"); finishedHere.current = false; };
+  }, [lessonId]);
+  useEffect(() => { startedDone.current = done; }, [lessonId]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!lesson || !a || lesson.academy !== a.id) return <NotFound />;
   const next = nextLesson(lesson);
   const prev = prevLesson(lesson);

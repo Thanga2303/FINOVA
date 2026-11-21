@@ -6,7 +6,8 @@ import Search from "./components/Search";
 import Footer from "./components/Footer";
 import ReminderToasts from "./components/ReminderToasts";
 import type { AcademyId } from "./data/types";
-import { refreshAccount } from "./lib/account";
+import { refreshAccount, useAccount } from "./lib/account";
+import { setAdEntitlement, setAdRoute } from "./lib/ads/manager";
 
 const Home = lazy(() => import("./pages/Home"));
 const Learn = lazy(() => import("./pages/Learn"));
@@ -30,6 +31,7 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const Account = lazy(() => import("./pages/Account"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const MasterclassList = lazy(() => import("./pages/Masterclasses").then((m) => ({ default: m.MasterclassList })));
+const AdminMetrics = lazy(() => import("./pages/AdminMetrics"));
 const MasterclassView = lazy(() => import("./pages/Masterclasses").then((m) => ({ default: m.MasterclassView })));
 
 const ACADEMIES: AcademyId[] = ["stocks", "mutual-funds", "trading", "investments"];
@@ -57,6 +59,10 @@ export default function App() {
   const loc = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
   useEffect(() => { refreshAccount(); }, []);
+  // Android ads: placement follows the route; entitlement (ad-free) follows the server-verified plan.
+  const { features, loaded } = useAccount();
+  useEffect(() => { setAdRoute(loc.pathname); }, [loc.pathname]);
+  useEffect(() => { setAdEntitlement(features.adFree, loaded); }, [features.adFree, loaded]);
 
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
@@ -106,6 +112,7 @@ export default function App() {
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/account" element={<Account />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/admin/metrics" element={<AdminMetrics />} />
               {/* Old addresses from FINOVA 1.x */}
               <Route path="/mutual-funds" element={<Navigate to="/learn/mutual-funds" replace />} />
               <Route path="/trading" element={<Navigate to="/learn/trading" replace />} />

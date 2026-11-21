@@ -6,6 +6,7 @@ import { healthFromState } from "../lib/wallet";
 import { Icon, Page, Ring } from "../components/ui";
 import DashboardBody from "./Dashboard";
 import { planLabel, useAccount } from "../lib/account";
+import { adPrivacyOptionsAvailable, openAdPrivacyOptions } from "../lib/ads/manager";
 
 function MembershipCard() {
   const { user, plan, status } = useAccount();
@@ -23,6 +24,7 @@ function MembershipCard() {
       <div className="flex gap-2">
         <Link to={user ? "/account" : "/account?mode=signin"} className="btn-ghost !py-2 text-sm">{user ? "Billing dashboard" : "Sign in"}</Link>
         {plan.id !== "elite" && <Link to="/pricing" className="btn-primary !py-2 text-sm">Upgrade</Link>}
+        {adPrivacyOptionsAvailable() && <button className="btn-ghost !py-2 text-sm" onClick={() => openAdPrivacyOptions()}>Ad privacy choices</button>}
       </div>
     </section>
   );

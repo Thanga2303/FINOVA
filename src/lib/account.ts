@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { clientHeaders } from "./native/platform";
 
 /**
  * Account & membership state. Entitlements come ONLY from the server (/api/auth/me), which reads the
@@ -31,7 +32,7 @@ const emit = (s: Partial<State>) => { state = { ...state, ...s }; subs.forEach((
 async function call<T>(url: string, body?: unknown): Promise<T> {
   const r = await fetch(url, {
     method: body === undefined ? "GET" : "POST",
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    headers: { ...clientHeaders(), ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
     body: body === undefined ? undefined : JSON.stringify(body),
     credentials: "same-origin",
   });
@@ -64,6 +65,9 @@ export const account = {
   cancel: () => call<Status>("/api/billing/cancel", {}).then(set),
   resume: () => call<Status>("/api/billing/resume", {}).then(set),
   history: () => call<{ events: { id: string; type: string; detail: Record<string, unknown>; at: number }[]; invoices: { id: string; plan: string; amount: number; currency: string; provider: string; status: string; test: boolean; at: number; periodEnd?: number }[] }>("/api/billing/history"),
+  playConfig: () => call<{ configured: boolean; products: { pro: string | null; elite: string | null }; accountTag: string }>("/api/billing/play/config"),
+  verifyPlay: (purchaseToken: string) => call<Status>("/api/billing/verify/google-play", { purchaseToken }).then(set),
+  restorePlay: (purchaseTokens: string[]) => call<{ results: { ok: boolean; plan?: PlanId; state?: string; error?: string }[] } & Status>("/api/billing/restore/google-play", { purchaseTokens }).then((r) => { set(r); return r; }),
   aiTicket: () => call<{ ticket: string; used: number; limit: number }>("/api/ai/ticket", {}),
 };
 

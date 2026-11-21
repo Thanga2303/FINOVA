@@ -3,6 +3,8 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { account, rupees, useAccount, type Plan, type PlanId } from "../lib/account";
 import { TiltCard } from "../components/fx";
 import { Icon, Page } from "../components/ui";
+import { track } from "../lib/metrics";
+import { suppressAds } from "../lib/ads/manager";
 
 const ROWS: [string, (p: Plan) => string | boolean][] = [
   ["Paper trading (stocks & funds)", () => true],
@@ -24,9 +26,11 @@ export default function Pricing() {
   const next = params.get("next");
   const { plan: current, user } = useAccount();
   const nav = useNavigate();
+  useEffect(() => { track("pricing_view"); return suppressAds("pricing"); }, []);
   useEffect(() => { account.plans().then((r) => setPlans(r.plans)).catch(() => setPlans([])); }, []);
 
   const choose = (id: PlanId) => {
+    if (id !== "free") track("upgrade_click", { plan: id, from: "pricing" });
     if (id === "free") return nav(user ? "/account" : "/account?mode=signup");
     const target = `/checkout?plan=${id}${next ? `&next=${encodeURIComponent(next)}` : ""}`;
     nav(user ? target : `/account?mode=signup&next=${encodeURIComponent(target)}`);

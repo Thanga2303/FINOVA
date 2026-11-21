@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { suppressAds } from "../../lib/ads/manager";
 import { Link } from "react-router-dom";
 import { estCharges, placeOrder, type OrderResult } from "../../lib/paper";
 import { setState, uid, useStore, type AssetKind } from "../../lib/store";
@@ -10,6 +11,7 @@ type Props = { open: boolean; onClose: () => void; kind: AssetKind; symbol: stri
 
 export default function OrderTicket({ open, onClose, kind, symbol, name, ltp, category, initialSide = "BUY" }: Props) {
   const paper = useStore((s) => s.paper);
+  useEffect(() => (open ? suppressAds("paper_order") : undefined), [open]); // no ads while placing a paper order
   const [side, setSide] = useState<"BUY" | "SELL">(initialSide);
   const [type, setType] = useState<"MARKET" | "LIMIT" | "LUMPSUM" | "SIP">(kind === "fund" ? "LUMPSUM" : "MARKET");
   const [qty, setQty] = useState(1);
